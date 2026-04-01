@@ -19,8 +19,8 @@ import httpx
 
 from dotenv import load_dotenv
 from livekit import agents, rtc
-from livekit.agents import AgentServer, AgentSession, Agent, room_io
-from livekit.agents import AgentStateChangedEvent, MetricsCollectedEvent, metrics
+from livekit.agents import AgentServer, AgentSession, Agent, room_io, metrics
+from livekit.agents import AgentStateChangedEvent, MetricsCollectedEvent
 from livekit.agents import llm as lk_llm
 from livekit.agents import function_tool, RunContext
 from livekit.plugins import silero, deepgram
@@ -318,22 +318,28 @@ server = AgentServer()
 
 @server.rtc_session(agent_name="parrotpod_agent")
 async def entrypoint(ctx: agents.JobContext):
-    # Extract agent_id from room name: parrotpod-agent-{id}-{random}
-    room_name = ctx.room.name
-    agent_id = 1  # default
+    # ─── 1. Connect IMMEDIATELY to avoid connection latency issues
+    try:
+        await ctx.connect(auto_subscribe=True)
+        logger.info(f"[Worker] Connected to room: {ctx.room.name}")
+    except Exception as e:
+        logger.error(f"[Worker] Failed to connect: {e}")
+        return
 
+    # ─── 2. Prepare Agent Config
+    room_name = ctx.room.name
+    agent_id = 1
     match = re.search(r"parrotpod-agent-(\d+)-", room_name)
     if match:
         agent_id = int(match.group(1))
 
-    logger.info(f"[Worker] Starting session for agent_id={agent_id}, room={room_name}")
+    logger.info(f"[Worker] Initializing session for agent_id={agent_id}")
 
     # Load config + files
     agent_config = await load_agent_config(agent_id)
     knowledge_context = await load_agent_files(agent_id)
 
     if not agent_config:
-        logger.warning(f"[Worker] No config found for agent_id={agent_id}, using defaults")
         agent_config = {
             "id": agent_id,
             "name": "Parrot Pod Assistant",
@@ -345,12 +351,12 @@ async def entrypoint(ctx: agents.JobContext):
 
     voice_model = agent_config.get("voice", "aura-2-odysseus-en")
     llm_model = agent_config.get("llm_model", "gpt-4o-mini")
-
     lang = agent_config.get("language", "en")
-    # Map short codes to Deepgram language codes
+    
     lang_map = {"en": "en-US", "ur": "ur", "ar": "ar", "es": "es", "fr": "fr"}
     dg_language = lang_map.get(lang, "en-US")
 
+    # ─── 3. Initialize Session using AgentSession (compatible with 1.5.1)
     session = AgentSession(
         stt=deepgram.STT(
             model="nova-2-general",
@@ -360,17 +366,16 @@ async def entrypoint(ctx: agents.JobContext):
         ),
         llm=lk_openai.LLM(
             model=llm_model,
-            tool_choice="auto",
         ),
         tts=deepgram.TTS(
             model=voice_model,
         ),
         vad=silero.VAD.load(
-            min_speech_duration=0.05,        # detect speech quickly
-            min_silence_duration=0.8,        # wait longer before treating silence as end of turn
-            prefix_padding_duration=0.5,     # keep a bit before speech starts
-            activation_threshold=0.45,       # slightly more sensitive
-            deactivation_threshold=0.35,     # slower deactivation = less cutting off
+            min_speech_duration=0.04,
+            min_silence_duration=0.8,
+            prefix_padding_duration=0.5,
+            activation_threshold=0.45,
+            deactivation_threshold=0.35,
         ),
     )
 
@@ -387,6 +392,7 @@ async def entrypoint(ctx: agents.JobContext):
 
     ctx.add_shutdown_callback(log_usage)
 
+    # ─── 4. Start Session
     await session.start(
         room=ctx.room,
         agent=ParrotPodAgent(agent_config, knowledge_context, room_name),
