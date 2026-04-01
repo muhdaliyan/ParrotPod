@@ -36,3 +36,5 @@ If you prefer not to use `npm` for starting, you can use the provided batch scri
 ```cmd
 start.bat
 ```
+
+## Author
