@@ -88,7 +88,7 @@ async def create_token(agent_id: int):
             raise HTTPException(status_code=404, detail="Agent not found")
 
         room_name = f"parrotpod-agent-{agent_id}-{uuid.uuid4().hex[:8]}"
-        identity = f"user-{uuid.uuid4().hex[:6]}"
+        identity = "test"
 
         if not LIVEKIT_API_KEY or not LIVEKIT_API_SECRET:
             raise HTTPException(
