@@ -71,7 +71,7 @@ async def dispatch_agent_to_room(room_name: str, agent_name: str = "parrotpod_ag
         dispatch = await client.agent_dispatch.create_dispatch(
             lkapi.CreateAgentDispatchRequest(room=room_name, agent_name=agent_name)
         )
-        print(f"[Dispatch] Agent '{agent_name}' → room '{room_name}' (id={dispatch.id})")
+        print(f"[Dispatch] Agent '{agent_name}' -> room '{room_name}' (id={dispatch.id})")
     except Exception as e:
         print(f"[Dispatch] Failed: {e}")
     finally:

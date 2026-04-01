@@ -318,41 +318,29 @@ server = AgentServer()
 
 @server.rtc_session(agent_name="parrotpod_agent")
 async def entrypoint(ctx: agents.JobContext):
-    # ─── 1. Connect IMMEDIATELY to avoid connection latency issues
-    try:
-        await ctx.connect(auto_subscribe=True)
-        logger.info(f"[Worker] Connected to room: {ctx.room.name}")
-    except Exception as e:
-        logger.error(f"[Worker] Failed to connect: {e}")
-        return
-
-    # ─── 2. Prepare Agent Config
     room_name = ctx.room.name
     agent_id = 1
-    caller_id = "test"  # Default if not found
-    
+    caller_id = "test"
+
     # Try SIP pattern: parrotpod-agent-{id}-_{phone}_{random}
     sip_match = re.search(r"parrotpod-agent-(\d+)-_(\+?\d+)_", room_name)
     if sip_match:
         agent_id = int(sip_match.group(1))
         caller_id = sip_match.group(2)
     else:
-        # Fallback to test/other pattern
         match = re.search(r"parrotpod-agent-(\d+)-", room_name)
         if match:
             agent_id = int(match.group(1))
-            # If it's a test session, caller_id stays "test"
 
-    logger.info(f"[Worker] Initializing session for agent_id={agent_id}, caller_id={caller_id}")
+    logger.info(f"[Worker] Starting session for agent_id={agent_id}, caller_id={caller_id}, room={room_name}")
 
-    # Ensure session exists in database (for SIP calls, it won't exist yet)
+    # Ensure session record exists (SIP calls arrive without a pre-created session)
     try:
         async with aiosqlite.connect(DATABASE_PATH) as db:
             cursor = await db.execute(
                 "SELECT id FROM sessions WHERE livekit_room = ?", (room_name,)
             )
             if not await cursor.fetchone():
-                logger.info(f"[Worker] Auto-creating session record for SIP/Room: {room_name}")
                 await db.execute(
                     "INSERT INTO sessions (agent_id, caller_id, livekit_room, status) VALUES (?, ?, ?, 'active')",
                     (agent_id, caller_id, room_name)
@@ -366,6 +354,7 @@ async def entrypoint(ctx: agents.JobContext):
     knowledge_context = await load_agent_files(agent_id)
 
     if not agent_config:
+        logger.warning(f"[Worker] No config for agent_id={agent_id}, using defaults")
         agent_config = {
             "id": agent_id,
             "name": "Parrot Pod Assistant",
@@ -378,11 +367,9 @@ async def entrypoint(ctx: agents.JobContext):
     voice_model = agent_config.get("voice", "aura-2-odysseus-en")
     llm_model = agent_config.get("llm_model", "gpt-4o-mini")
     lang = agent_config.get("language", "en")
-    
     lang_map = {"en": "en-US", "ur": "ur", "ar": "ar", "es": "es", "fr": "fr"}
     dg_language = lang_map.get(lang, "en-US")
 
-    # ─── 3. Initialize Session using AgentSession (compatible with 1.5.1)
     session = AgentSession(
         stt=deepgram.STT(
             model="nova-2-general",
@@ -392,22 +379,22 @@ async def entrypoint(ctx: agents.JobContext):
         ),
         llm=lk_openai.LLM(
             model=llm_model,
+            tool_choice="auto",
         ),
         tts=deepgram.TTS(
             model=voice_model,
         ),
         vad=silero.VAD.load(
-            min_speech_duration=0.02,        # detect speech even faster
-            min_silence_duration=0.5,        # wait less before replying (faster turn-taking)
-            prefix_padding_duration=0.3,     # less padding
-            activation_threshold=0.35,       # more sensitive
-            deactivation_threshold=0.25,     # faster deactivation
+            min_speech_duration=0.05,
+            min_silence_duration=0.8,
+            prefix_padding_duration=0.5,
+            activation_threshold=0.45,
+            deactivation_threshold=0.35,
         ),
     )
 
     import time
     start_time = time.time()
-
     usage_collector = metrics.UsageCollector()
 
     @session.on("metrics_collected")
@@ -415,45 +402,30 @@ async def entrypoint(ctx: agents.JobContext):
         metrics.log_metrics(ev.metrics)
         usage_collector.collect(ev.metrics)
 
-    async def update_session_status():
-        """Helper to mark session as ended in DB."""
-        duration = int(time.time() - start_time)
-        print(f"[Worker] --- Session Ending: {room_name} (Duration: {duration}s) ---")
-        try:
-            async with aiosqlite.connect(DATABASE_PATH) as db:
-                logger.info(f"[Worker] Marking session as 'ended' in DB for Room: {room_name}")
-                await db.execute(
-                    """UPDATE sessions 
-                       SET status = 'ended', duration_seconds = ?, ended_at = CURRENT_TIMESTAMP 
-                       WHERE livekit_room = ?""",
-                    (duration, room_name)
-                )
-                await db.commit()
-                print(f"[Worker] --- Database Updated: {room_name} status=ended ---")
-        except Exception as e:
-            logger.error(f"[DB] Failed to update session status: {e}")
-            print(f"[Worker] Error updating DB: {e}")
-
     async def log_usage():
         summary = usage_collector.get_summary()
         logger.info(f"[Usage] {summary}")
-        # Secondary safety update
-        await update_session_status()
+        # Record real duration in DB
+        duration = int(time.time() - start_time)
+        try:
+            async with aiosqlite.connect(DATABASE_PATH) as db:
+                await db.execute(
+                    "UPDATE sessions SET status = 'ended', duration_seconds = ?, ended_at = CURRENT_TIMESTAMP WHERE livekit_room = ?",
+                    (duration, room_name)
+                )
+                await db.commit()
+                logger.info(f"[Worker] Session ended: {room_name} ({duration}s)")
+        except Exception as e:
+            logger.error(f"[DB] Failed to update session: {e}")
 
     ctx.add_shutdown_callback(log_usage)
 
-    # ─── 4. Start Session
-    try:
-        await session.start(
-            room=ctx.room,
-            agent=ParrotPodAgent(agent_config, knowledge_context, room_name),
-        )
-    except Exception as e:
-        logger.error(f"[Worker] Session error: {e}")
-    finally:
-        # Prompt update as soon as start() completes
-        await update_session_status()
+    await session.start(
+        room=ctx.room,
+        agent=ParrotPodAgent(agent_config, knowledge_context, room_name),
+    )
 
 
 if __name__ == "__main__":
     agents.cli.run_app(server)
+

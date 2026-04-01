@@ -31,8 +31,8 @@ type SessionStatus =
 const STATUS_LABELS: Record<SessionStatus, string> = {
   idle: 'Ready to connect',
   connecting: 'Connecting to LiveKit...',
-  waiting_agent: 'Waiting for agent to join...',
-  listening: 'Listening...',
+  waiting_agent: 'Waiting for agent...',
+  listening: 'Listening to you...',
   thinking: 'Agent is thinking...',
   speaking: 'Agent is speaking...',
   ended: 'Session ended',
@@ -45,7 +45,7 @@ const STATUS_COLORS: Record<SessionStatus, string> = {
   waiting_agent: 'text-secondary',
   listening: 'text-green-600',
   thinking: 'text-primary',
-  speaking: 'text-primary',
+  speaking: 'text-secondary',
   ended: 'text-on-surface-variant',
   error: 'text-error',
 };
@@ -68,6 +68,9 @@ export default function VoiceTestModal({ agentId, agentName, onClose }: VoiceTes
   const ringGainRef = useRef<GainNode | null>(null);   // master ring gain — set to 0 to silence instantly
   const ringTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ringingRef = useRef(false);
+  // Energy-based speaking detection
+  const statusRef = useRef<SessionStatus>('idle');
+  const lastAgentHighRef = useRef<number>(0);
 
   // ── Traditional US Outgoing Ringback Tone ────────────────────────────────────
   // 440 Hz + 480 Hz for 2 seconds, 4 seconds off.
@@ -147,7 +150,7 @@ export default function VoiceTestModal({ agentId, agentName, onClose }: VoiceTes
     if (!svgGroup) return;
     const rects = svgGroup.querySelectorAll('rect');
     rects.forEach((rect, i) => {
-      const h = Math.max(2, values[i] * 48); // max 48px, centered in 56px container
+      const h = Math.max(2, values[i] * 54); // max 54px, centered in 56px container
       const y = (56 - h) / 2;
       rect.setAttribute('height', String(h));
       rect.setAttribute('y', String(y));
@@ -253,14 +256,12 @@ export default function VoiceTestModal({ agentId, agentName, onClose }: VoiceTes
         analyser.fftSize = 512;
         analyser.smoothingTimeConstant = 0.5;
         source.connect(analyser);
-        agentAnalyserRef.current = analyser;
+        agentAnalyserRef.current = analyser; // energy polling now takes over status
         stopIdleAnim();
         animateBars(analyser, agentBarsRef, agentSvgRef, agentAnimRef);
       } catch {
         // analyser optional
       }
-
-      setStatus('speaking');
     },
     [animateBars]
   );
@@ -286,9 +287,8 @@ export default function VoiceTestModal({ agentId, agentName, onClose }: VoiceTes
 
       if (!livekit_url) throw new Error('LIVEKIT_URL not set in backend .env');
 
-      // 2. Create Room
+      // 2. Create Room (no adaptiveStream — it can pause audio subscriptions)
       const room = new Room({
-        adaptiveStream: true,
         dynacast: true,
       });
       roomRef.current = room;
@@ -296,7 +296,6 @@ export default function VoiceTestModal({ agentId, agentName, onClose }: VoiceTes
       // 3. Room event listeners
       room.on(RoomEvent.Connected, () => {
         setStatus('waiting_agent');
-        setTranscript([{ role: 'agent', text: `Connected to room. Waiting for ${agentName} agent worker to join...` }]);
       });
 
       room.on(RoomEvent.Disconnected, async () => {
@@ -320,7 +319,6 @@ export default function VoiceTestModal({ agentId, agentName, onClose }: VoiceTes
       room.on(RoomEvent.ParticipantConnected, (participant: RemoteParticipant) => {
         stopRingTone();  // agent picked up!
         setStatus('listening');
-        setTranscript(prev => [...prev, { role: 'agent', text: `${agentName} is ready. Start speaking!` }]);
 
         // Subscribe to their tracks
         participant.trackPublications.forEach((pub) => {
@@ -329,25 +327,20 @@ export default function VoiceTestModal({ agentId, agentName, onClose }: VoiceTes
       });
 
       room.on(RoomEvent.TrackSubscribed, (_track, publication, _participant) => {
-        stopRingTone();  // definitely stop now — audio is coming in
+        stopRingTone();  // stop ring — audio is incoming
         attachAgentAudio(publication as RemoteTrackPublication);
-        setStatus('speaking');
+        // Status transitions handled by energy polling
       });
 
       room.on(RoomEvent.TrackUnsubscribed, () => {
+        // Just stop animations; energy polling will set 'listening' after silence
         stopAnimating(agentAnimRef, agentBarsRef, agentSvgRef);
         startIdleAnim(agentSvgRef, agentBarsRef);
-        setStatus('listening');
       });
 
-      room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
-        const isAgentSpeaking = speakers.some(s => s.isAgent || s.identity !== room.localParticipant.identity);
-        const isUserSpeaking = speakers.some(s => s.identity === room.localParticipant.identity);
-
-        if (isAgentSpeaking) setStatus('speaking');
-        else if (isUserSpeaking) setStatus('listening');
-        else if (room.state === ConnectionState.Connected) setStatus('listening');
-      });
+      // ActiveSpeakersChanged is intentionally not used for speaking/listening
+      // because it fires too often and is confused by mic echo.
+      // Energy polling (below) handles that reliably.
 
       // 4. Connect to LiveKit
       await room.connect(livekit_url, token);
@@ -417,6 +410,40 @@ export default function VoiceTestModal({ agentId, agentName, onClose }: VoiceTes
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [transcript]);
+
+  // Keep statusRef in sync with status state (avoids closure issues in intervals)
+  useEffect(() => { statusRef.current = status; }, [status]);
+
+  // ── Energy-based speaking detection (runs for lifetime of component) ──────────
+  // Polls agentBarsRef every 100ms. If avg energy > 0.08 → 'speaking'.
+  // After 600ms of silence from the agent → 'listening'.
+  // This is immune to TrackUnsubscribed between TTS audio chunks and mic-echo
+  // false positives from ActiveSpeakersChanged.
+  useEffect(() => {
+    const THRESHOLD = 0.08;        // above idle-animation noise (~0.04)
+    const SILENCE_MS = 600;        // ms of silence before declaring 'listening'
+    const N = 20;
+
+    const id = window.setInterval(() => {
+      const s = statusRef.current;
+      // Only care when session is active
+      if (!['waiting_agent', 'listening', 'speaking'].includes(s)) return;
+      // Only run once the agent's analyser is attached (i.e. track subscribed)
+      if (!agentAnalyserRef.current) return;
+
+      const avg = agentBarsRef.current.reduce((a, b) => a + b, 0) / N;
+      const now = Date.now();
+
+      if (avg > THRESHOLD) {
+        lastAgentHighRef.current = now;
+        if (statusRef.current !== 'speaking') setStatus('speaking');
+      } else if (statusRef.current === 'speaking' && now - lastAgentHighRef.current > SILENCE_MS) {
+        setStatus('listening');
+      }
+    }, 100);
+
+    return () => window.clearInterval(id);
+  }, []); // intentionally empty — uses refs only
 
   // Start idle breathing anim on mount
   useEffect(() => {
@@ -488,7 +515,7 @@ export default function VoiceTestModal({ agentId, agentName, onClose }: VoiceTes
                         y={27}
                         width={BAR_W}
                         height={2}
-                        rx={BAR_W / 2}
+                        rx={0}
                         fill={color}
                         opacity={0.85}
                         style={{ transition: 'height 0.05s ease, y 0.05s ease' }}
@@ -507,6 +534,7 @@ export default function VoiceTestModal({ agentId, agentName, onClose }: VoiceTes
             )}
             {status === 'error' && <AlertCircle size={15} className="text-error" />}
             {status === 'listening' && <Radio size={15} className="text-green-600 animate-pulse" />}
+            {status === 'speaking' && <Volume2 size={15} className="text-secondary animate-pulse" />}
             <span className={`text-sm font-bold ${STATUS_COLORS[status]}`}>
               {STATUS_LABELS[status]}
             </span>
@@ -547,13 +575,7 @@ export default function VoiceTestModal({ agentId, agentName, onClose }: VoiceTes
           </div>
         )}
 
-        {/* Worker reminder */}
-        <div className="mx-6 mb-4 px-4 py-3 bg-secondary-container/40 rounded-xl text-xs text-on-surface-variant">
-          <p className="font-bold mb-0.5">Voice agent worker must be running:</p>
-          <code className="text-[10px] opacity-80">python voice_agent.py dev</code>
-          <span className="mx-2 opacity-40">|</span>
-          <code className="text-[10px] opacity-80">--url wss://... --api-key ... --api-secret ...</code>
-        </div>
+
 
         {/* Actions */}
         <div className="px-6 pb-6">
