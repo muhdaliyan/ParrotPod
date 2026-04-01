@@ -38,16 +38,27 @@ class AssignRequest(BaseModel):
 async def list_numbers():
     token = get_token()
     rest_url = get_rest_url()
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(
-            f"{rest_url}/twirp/livekit.PhoneNumberService/ListPhoneNumbers",
-            json={},
-            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-        )
-        if not resp.is_success:
-            print(f"Error fetching numbers: {resp.text}")
-            raise HTTPException(status_code=resp.status_code, detail="Failed to fetch numbers from LiveKit")
-        return resp.json()
+    
+    # Increase timeout for LiveKit Twirp calls (they can be slow)
+    timeout = httpx.Timeout(30.0)
+    
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        try:
+            resp = await client.post(
+                f"{rest_url}/twirp/livekit.PhoneNumberService/ListPhoneNumbers",
+                json={},
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+            )
+            if not resp.is_success:
+                print(f"LiveKit Error (ListPhoneNumbers): {resp.status_code} - {resp.text}")
+                raise HTTPException(status_code=resp.status_code, detail=f"LiveKit: {resp.text}")
+            return resp.json()
+        except httpx.ReadTimeout:
+            print("LiveKit Timeout (ListPhoneNumbers)")
+            raise HTTPException(status_code=504, detail="LiveKit request timed out. Please try again.")
+        except Exception as e:
+            print(f"Error fetching numbers: {str(e)}")
+            raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/numbers/assign")
 async def assign_number(payload: AssignRequest):
@@ -57,66 +68,78 @@ async def assign_number(payload: AssignRequest):
     # We use a naming convention that the voice_agent worker understands: parrotpod-agent-{id}-
     room_name = f"parrotpod-agent-{payload.agent_id}-"
     
-    async with httpx.AsyncClient() as client:
+    # Increase timeout for LiveKit Twirp calls
+    timeout = httpx.Timeout(30.0)
+    
+    async with httpx.AsyncClient(timeout=timeout) as client:
         headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
         
         # 1. First, we MUST find the internal LiveKit ID (PN_...) for this E.164 number
-        number_resp = await client.post(f"{rest_url}/twirp/livekit.PhoneNumberService/ListPhoneNumbers", json={}, headers=headers)
-        if not number_resp.is_success:
-            raise HTTPException(status_code=number_resp.status_code, detail="Failed to fetch number details from LiveKit")
-        
-        number_info = next((n for n in number_resp.json().get("items", []) if n.get("e164_format") == payload.phone_number), None)
-        if not number_info:
-            raise HTTPException(status_code=404, detail=f"Phone number {payload.phone_number} not found in your account")
-        
-        number_id = number_info["id"] # The PN_... internal ID
-        
-        # 2. Get or Create a SIP Dispatch Rule specifically for this Number ID (Trunk)
-        rule_id = None
-        list_rules_resp = await client.post(f"{rest_url}/twirp/livekit.SIP/ListSIPDispatchRule", json={}, headers=headers)
-        if list_rules_resp.is_success:
-            existing_rules = list_rules_resp.json().get("items", [])
-            for r in existing_rules:
-                # Search for a rule that is already tied to this specific number's ID (trunk)
-                if number_id in r.get("trunk_ids", []):
-                    rule_id = r.get("sip_dispatch_rule_id")
-                    print(f"Found existing rule for number id {number_id}: {rule_id}")
-                    break
-        
-        if rule_id:
-            # Update existing rule to point to the current agent's room prefix (Individual routing)
-            # Individual routing is better for AI agents as it gives each caller their own room.
-            update_payload = {
-                "sip_dispatch_rule_id": rule_id,
-                "update": {
+        try:
+            number_resp = await client.post(f"{rest_url}/twirp/livekit.PhoneNumberService/ListPhoneNumbers", json={}, headers=headers)
+            if not number_resp.is_success:
+                print(f"LiveKit Error (ListPhoneNumbers): {number_resp.text}")
+                raise HTTPException(status_code=number_resp.status_code, detail="Failed to fetch number details from LiveKit")
+            
+            number_info = next((n for n in number_resp.json().get("items", []) if n.get("e164_format") == payload.phone_number), None)
+            if not number_info:
+                raise HTTPException(status_code=404, detail=f"Phone number {payload.phone_number} not found in your account")
+            
+            number_id = number_info["id"] # The PN_... internal ID
+            
+            # 2. Get or Create a SIP Dispatch Rule specifically for this Number ID (Trunk)
+            rule_id = None
+            list_rules_resp = await client.post(f"{rest_url}/twirp/livekit.SIP/ListSIPDispatchRule", json={}, headers=headers)
+            if list_rules_resp.is_success:
+                existing_rules = list_rules_resp.json().get("items", [])
+                for r in existing_rules:
+                    # Search for a rule that is already tied to this specific number's ID (trunk)
+                    if number_id in r.get("trunk_ids", []):
+                        rule_id = r.get("sip_dispatch_rule_id")
+                        print(f"Found existing rule for number id {number_id}: {rule_id}")
+                        break
+            
+            if rule_id:
+                # Update existing rule to point to the current agent's room prefix (Individual routing)
+                # Individual routing is better for AI agents as it gives each caller their own room.
+                update_payload = {
+                    "sip_dispatch_rule_id": rule_id,
+                    "update": {
+                        "rule": {
+                            "dispatch_rule_individual": {
+                                "room_prefix": room_name
+                            }
+                        }
+                    }
+                }
+                await client.post(f"{rest_url}/twirp/livekit.SIP/UpdateSIPDispatchRule", json=update_payload, headers=headers)
+            else:
+                # Create a NEW rule specific to THIS number ID (Trunk) with Individual routing
+                dispatch_payload = {
+                    "name": f"ParrotPod Number {payload.phone_number} Dispatch",
+                    "trunk_ids": [number_id], 
                     "rule": {
                         "dispatch_rule_individual": {
                             "room_prefix": room_name
                         }
                     }
                 }
-            }
-            await client.post(f"{rest_url}/twirp/livekit.SIP/UpdateSIPDispatchRule", json=update_payload, headers=headers)
-        else:
-            # Create a NEW rule specific to THIS number ID (Trunk) with Individual routing
-            dispatch_payload = {
-                "name": f"ParrotPod Number {payload.phone_number} Dispatch",
-                "trunk_ids": [number_id], 
-                "rule": {
-                    "dispatch_rule_individual": {
-                        "room_prefix": room_name
-                    }
-                }
-            }
-            rule_resp = await client.post(f"{rest_url}/twirp/livekit.SIP/CreateSIPDispatchRule", json=dispatch_payload, headers=headers)
-            if not rule_resp.is_success:
-                print(f"Error creating dispatch rule: {rule_resp.text}")
-                raise HTTPException(status_code=rule_resp.status_code, detail=f"Failed to create SIP dispatch rule: {rule_resp.text}")
-            rule_data = rule_resp.json()
-            rule_id = rule_data.get("sip_dispatch_rule_id") or rule_data.get("id")
-        
-        if not rule_id:
-             raise HTTPException(status_code=500, detail="LiveKit failed to provide or update a SIP dispatch rule ID")
+                rule_resp = await client.post(f"{rest_url}/twirp/livekit.SIP/CreateSIPDispatchRule", json=dispatch_payload, headers=headers)
+                if not rule_resp.is_success:
+                    print(f"Error creating dispatch rule: {rule_resp.text}")
+                    raise HTTPException(status_code=rule_resp.status_code, detail=f"Failed to create SIP dispatch rule: {rule_resp.text}")
+                rule_data = rule_resp.json()
+                rule_id = rule_data.get("sip_dispatch_rule_id") or rule_data.get("id")
+            
+            if not rule_id:
+                 raise HTTPException(status_code=500, detail="LiveKit failed to provide or update a SIP dispatch rule ID")
+
+        except httpx.ReadTimeout:
+            raise HTTPException(status_code=504, detail="LiveKit request timed out while assigning number.")
+        except Exception as e:
+            if isinstance(e, HTTPException): raise e
+            print(f"Assignment error: {str(e)}")
+            raise HTTPException(status_code=500, detail=str(e))
 
         # 4. Persistence: Update the database
         db = await get_db()
@@ -159,15 +182,23 @@ async def unassign_number(payload: AssignRequest):
     token = get_token()
     rest_url = get_rest_url()
     
-    async with httpx.AsyncClient() as client:
+    # Increase timeout for LiveKit Twirp calls
+    timeout = httpx.Timeout(30.0)
+    
+    async with httpx.AsyncClient(timeout=timeout) as client:
         headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
         
         # 1. Clear in LiveKit
-        update_payload = {
-            "phone_number": payload.phone_number,
-            "sip_dispatch_rule_id": "" # Clear rule
-        }
-        await client.post(f"{rest_url}/twirp/livekit.PhoneNumberService/UpdatePhoneNumber", json=update_payload, headers=headers)
+        try:
+            update_payload = {
+                "phone_number": payload.phone_number,
+                "sip_dispatch_rule_id": "" # Clear rule
+            }
+            resp = await client.post(f"{rest_url}/twirp/livekit.PhoneNumberService/UpdatePhoneNumber", json=update_payload, headers=headers)
+            if not resp.is_success:
+                print(f"LiveKit Error (UpdatePhoneNumber): {resp.text}")
+        except Exception as e:
+            print(f"Error clearing LiveKit number assignment: {e}")
         
         # 2. Clear in Database
         db = await get_db()

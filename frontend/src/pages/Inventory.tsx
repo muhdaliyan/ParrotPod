@@ -25,8 +25,8 @@ export default function Inventory() {
   const [assigning, setAssigning] = useState<PhoneNumber | null>(null);
   const [isAssigning, setIsAssigning] = useState(false);
 
-  const { data: agents, loading: agentsLoading } = useApi<Agent[]>('/api/agents');
-  const { data: numbersData, loading: numbersLoading, refetch: refetchNumbers } = useApi<{items: PhoneNumber[]}>('/api/telephony/numbers');
+  const { data: agents, loading: agentsLoading, error: agentsError } = useApi<Agent[]>('/api/agents');
+  const { data: numbersData, loading: numbersLoading, error: numbersError, refetch: refetchNumbers } = useApi<{items: PhoneNumber[]}>('/api/telephony/numbers');
   const numbers = numbersData?.items || [];
 
   const showToast = (msg: string) => {
@@ -141,6 +141,11 @@ export default function Inventory() {
           </div>
           {agentsLoading ? (
             <div className="text-center py-8"><Loader2 size={24} className="animate-spin text-secondary mx-auto" /></div>
+          ) : agentsError ? (
+            <div className="text-center py-12 bg-red-50/10 rounded-2xl border border-red-500/20">
+              <Bot size={40} className="mx-auto mb-3 text-red-500 opacity-50" />
+              <p className="text-red-500 font-medium">Failed to load agents: {agentsError}</p>
+            </div>
           ) : agents && agents.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {agents.map(agent => (
@@ -186,6 +191,18 @@ export default function Inventory() {
           </div>
           {numbersLoading ? (
             <div className="text-center py-8"><Loader2 size={24} className="animate-spin text-secondary mx-auto" /></div>
+          ) : numbersError ? (
+            <div className="text-center py-12 bg-red-50/10 rounded-2xl border border-red-500/20">
+              <Phone size={40} className="mx-auto mb-3 text-red-500 opacity-50" />
+              <p className="text-red-500 font-medium mb-2">Error connecting to LiveKit</p>
+              <p className="text-xs text-on-surface-variant opacity-70 mb-4">{numbersError}</p>
+              <button 
+                onClick={() => refetchNumbers()}
+                className="px-6 py-2 bg-red-500 text-white rounded-xl font-bold text-sm hover:bg-red-600 transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
           ) : numbers && numbers.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {numbers.map(num => (
@@ -216,6 +233,7 @@ export default function Inventory() {
             <div className="text-center py-12 bg-white rounded-2xl border-2 border-dashed border-outline-variant/20">
               <Phone size={40} className="mx-auto mb-3 opacity-20" />
               <p className="text-on-surface-variant font-medium">No phone numbers found in your LiveKit account</p>
+              <p className="text-xs text-on-surface-variant opacity-50 mt-1">Numbers purchased on LiveKit will appear here.</p>
             </div>
           )}
         </section>
