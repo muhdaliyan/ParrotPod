@@ -1,0 +1,44 @@
+# General
+.DS_Store
+Thumbs.db
+*.log
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+.env
+
+# Database
+*.sqlite3
+*.db
+parrotpod.db
+
+# Node
+node_modules/
+dist/
+build/
+coverage/
+
+# Specific Application files (e.g., debug and uploads)
+backend/uploads/
+backend/dispatch_test.txt
+backend/sdk_test.txt
+backend/sig_dump.txt
+backend/vad_sig.txt
+
+# Environment Variables
+.env*
+!.env.example

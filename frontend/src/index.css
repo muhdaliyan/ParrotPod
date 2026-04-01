@@ -1,0 +1,182 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  /* ================= TYPOGRAPHY ================= */
+  --font-headline: "Inter", sans-serif;
+  --font-body: "Inter", sans-serif;
+
+  /* ================= CORE COLORS ================= */
+  --color-primary: #19445c;
+  --color-primary-container: #345c75;
+  --color-on-primary: #ffffff;
+
+  --color-secondary: #2f5e7f;
+  --color-secondary-container: #a9d7fd;
+  --color-on-secondary-container: #2f5e7f;
+
+  /* ================= SURFACES ================= */
+  --color-background: #f9faf5;
+  --color-surface: #f9faf5;
+
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f3f4ef;
+  --color-surface-container: #edeee9;
+  --color-surface-container-high: #e8e9e4;
+  --color-surface-container-highest: #e2e3de;
+
+  /* ================= TEXT ================= */
+  --color-on-surface: #1a1c19;
+  --color-on-surface-variant: #42474c;
+
+  /* ================= UTILITY ================= */
+  --color-surface-variant: #f3f4ef;
+  --color-outline-variant: #c1c7cd;
+
+  /* ================= ACCENTS ================= */
+  --color-primary-fixed: #d7f3e3;
+  --color-secondary-fixed: #a9d7fd;
+
+  /* ================= STATES ================= */
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+
+  /* ================= RADIUS ================= */
+  --radius-default: 1.5rem;
+}
+
+/* ================= BASE ================= */
+@layer base {
+
+  :root {
+    /* Compensates for zoom: 0.9 on body so h-screen fills the real viewport */
+    --screen-h: calc(100vh / 0.9);
+  }
+
+  html,
+  body {
+    height: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Hide scrollbars globally — content still scrolls */
+  * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  *::-webkit-scrollbar {
+    display: none;
+  }
+
+  body {
+    @apply bg-background text-on-surface font-body;
+    zoom: 0.9;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-headline tracking-tight;
+  }
+}
+
+/* ================= TYPOGRAPHY ================= */
+.markdown-content strong {
+  font-weight: 700;
+}
+
+.markdown-content p {
+  margin-bottom: 1rem;
+}
+
+.markdown-content ul {
+  list-style-type: disc;
+  padding-left: 1.25rem;
+}
+
+/* ================= COMPONENTS ================= */
+@layer components {
+
+  /* Glass (Updated to Studio Glass) */
+  .glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(20px);
+  }
+
+  /* Ambient Shadow (soft elevation) */
+  .ambient-shadow {
+    box-shadow: 0 20px 60px rgba(26, 28, 25, 0.04);
+  }
+
+  /* Ghost Border (very subtle) */
+  .ghost-border {
+    border: 1px solid rgba(193, 199, 205, 0.15);
+  }
+
+  /* ================= BUTTONS ================= */
+
+  .btn-primary {
+    @apply text-on-primary font-semibold;
+    background: linear-gradient(135deg, #19445c, #345c75);
+    transition: all 0.25s ease;
+  }
+
+  .btn-primary:hover {
+    opacity: 0.9;
+    box-shadow: 0 20px 40px rgba(26, 28, 25, 0.05);
+  }
+
+  .btn-primary:active {
+    transform: scale(0.97);
+  }
+
+  .btn-secondary {
+    @apply bg-secondary-container text-on-secondary-container font-medium;
+  }
+
+  .btn-tertiary {
+    @apply text-primary font-medium;
+    background: transparent;
+  }
+
+  /* ================= INPUT ================= */
+
+  .input-field {
+    @apply bg-surface-container-highest text-on-surface px-4 py-3 rounded-[var(--radius-default)];
+    border: none;
+    transition: all 0.2s ease;
+  }
+
+  .input-field:focus {
+    outline: none;
+    box-shadow: 0 0 0 6px rgba(25, 68, 92, 0.1);
+  }
+
+  /* ================= LAYOUT ================= */
+
+  .card {
+    @apply bg-surface-container-lowest p-8 rounded-[var(--radius-default)];
+    box-shadow: 0 20px 60px rgba(26, 28, 25, 0.04);
+  }
+
+  .section {
+    @apply bg-surface-container-low p-8 rounded-[var(--radius-default)];
+  }
+
+  /* Listening / Active Panel */
+  .waveform {
+    @apply bg-primary-fixed;
+  }
+}
+
+/* ================= TEXTURE ================= */
+.canvas-grid {
+  background-image: radial-gradient(rgba(193, 199, 205, 0.3) 0.5px, transparent 0.5px);
+  background-size: 28px 28px;
+}

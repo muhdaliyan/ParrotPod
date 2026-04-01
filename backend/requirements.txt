@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+aiosqlite
+aiofiles
+python-dotenv
+python-multipart
+httpx
+pydantic
+pandas
+PyPDF2
+livekit-agents
+livekit-plugins-deepgram
+livekit-plugins-openai
+livekit-plugins-silero
+livekit-api
+openai
+deepgram-sdk
