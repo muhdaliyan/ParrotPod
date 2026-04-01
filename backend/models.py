@@ -24,6 +24,8 @@ class AgentUpdate(BaseModel):
     llm_model: Optional[str] = None
     language: Optional[str] = None
     status: Optional[str] = None
+    phone_number: Optional[str] = None
+    sip_dispatch_rule_id: Optional[str] = None
 
 
 class AgentOut(BaseModel):
@@ -36,6 +38,8 @@ class AgentOut(BaseModel):
     llm_model: str
     language: str
     status: str
+    phone_number: str
+    sip_dispatch_rule_id: str
     created_at: str
     updated_at: str
 

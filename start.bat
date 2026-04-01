@@ -14,26 +14,22 @@ if not exist "backend\.env" (
     exit /b 1
 )
 
-echo  [1/3] Starting Backend  (FastAPI on :8000)...
-start "Parrot Pod - Backend" cmd /k "cd /d %~dp0backend && call venv\Scripts\activate && uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
-
-echo  [2/3] Starting Frontend (Vite on :3000)...
-start "Parrot Pod - Frontend" cmd /k "cd /d %~dp0frontend && npm run dev"
-
-echo  [3/3] Starting Voice Agent Worker...
-start "Parrot Pod - Voice Worker" cmd /k "cd /d %~dp0backend && call venv\Scripts\activate && python voice_agent.py dev"
-
 echo.
 echo  ========================================
-echo   All services are starting!
+echo   Starting all services in one terminal!
 echo.
 echo   Frontend    ->  http://localhost:3000
 echo   Backend     ->  http://localhost:8000
 echo   API Docs    ->  http://localhost:8000/docs
 echo  ========================================
 echo.
-echo  Three terminal windows opened.
-echo  Close them all to stop all services.
+echo  Press Ctrl+C to stop all services.
 echo.
-timeout /t 4 /nobreak >nul
+
+REM Give the backend/frontend a moment to start before launching the browser
 start "" "http://localhost:3000"
+
+npx concurrently -k -n "BACKEND,FRONTEND,VOICE" -c "blue,green,magenta" ^
+    "cd /d %~dp0backend && call venv\Scripts\activate && uvicorn main:app --host 0.0.0.0 --port 8000 --reload" ^
+    "cd /d %~dp0frontend && npm run dev" ^
+    "cd /d %~dp0backend && call venv\Scripts\activate && python voice_agent.py dev"

@@ -14,6 +14,8 @@ interface Agent {
   llm_model: string;
   language: string;
   status: string;
+  phone_number: string;
+  sip_dispatch_rule_id: string;
 }
 
 interface KnowledgeFile {
@@ -149,6 +151,19 @@ export default function Workflows() {
       console.error('Create failed', err);
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleUnassignNumber = async () => {
+    if (!activeAgent || !activeAgent.phone_number) return;
+    try {
+      await apiPost('/api/telephony/numbers/unassign', {
+        phone_number: activeAgent.phone_number,
+        agent_id: activeAgent.id
+      });
+      refetchAgents();
+    } catch (err) {
+      console.error('Unassign failed', err);
     }
   };
 
@@ -396,23 +411,37 @@ export default function Workflows() {
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Phone Number</label>
-                      <p className="text-xs text-on-surface-variant">Assign a number to receive inbound calls. (Coming soon — purchase in Marketplace)</p>
-                      <select
-                        disabled
-                        className="w-full bg-surface-container-low border-none rounded-xl px-4 py-3 text-on-surface-variant outline-none opacity-60 cursor-not-allowed"
-                      >
-                        <option value="">— No number assigned —</option>
-                        <option value="+1-555-0101">+1 (555) 010-1 · US (Demo)</option>
-                        <option value="+1-555-0102">+1 (555) 010-2 · US (Demo)</option>
-                        <option value="+44-20-0000">+44 20 0000 · UK (Demo)</option>
-                        <option value="+92-21-0000">+92 21 0000 · PK (Demo)</option>
-                      </select>
-                      <p className="text-[10px] text-on-surface-variant opacity-70 flex items-center gap-1">
-                        <span className="inline-block w-2 h-2 rounded-full bg-secondary-container"></span>
-                        Buy a real number in the Marketplace tab
-                      </p>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Assigned Phone Number</label>
+                        <p className="text-xs text-on-surface-variant mt-1">This number routes directly to this agent.</p>
+                      </div>
+                      
+                      {activeAgent.phone_number ? (
+                        <div className="bg-secondary-container/20 p-4 rounded-2xl border border-secondary/10 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-secondary text-white p-2 rounded-lg">
+                              <Phone size={16} />
+                            </div>
+                            <div>
+                              <p className="font-bold text-primary">{activeAgent.phone_number}</p>
+                              <p className="text-[10px] text-on-surface-variant uppercase tracking-wider">SIP Active</p>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={handleUnassignNumber}
+                            className="bg-white/50 hover:bg-error-container hover:text-error px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+                          >
+                            Unassign
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="bg-surface-container-low p-6 rounded-2xl border border-dashed border-outline-variant/30 text-center">
+                          <Phone size={24} className="mx-auto mb-2 opacity-20" />
+                          <p className="text-sm font-medium text-on-surface-variant">No number assigned</p>
+                          <p className="text-[10px] text-on-surface-variant mt-1">Go to Marketplace or Inventory to assign a number.</p>
+                        </div>
+                      )}
                     </div>
                   </>
                 )}

@@ -7,7 +7,7 @@ import os
 load_dotenv()
 
 from database import init_db
-from routers import agents, files, sessions, notifications, dashboard
+from routers import agents, files, sessions, notifications, dashboard, telephony
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
@@ -39,6 +39,7 @@ app.include_router(files.router)
 app.include_router(sessions.router)
 app.include_router(notifications.router)
 app.include_router(dashboard.router)
+app.include_router(telephony.router)
 
 
 @app.get("/")

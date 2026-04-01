@@ -1,15 +1,8 @@
 import { useState } from 'react';
-import { Phone, Bot, Search, Filter, ShoppingCart, Star, ArrowRight, Plus, Loader2, CheckCircle } from 'lucide-react';
+import { Bot, Search, Filter, Star, ArrowRight, Plus, Loader2, Phone } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useApi, apiPost } from '../hooks/useApi';
+import { apiPost } from '../hooks/useApi';
 
-interface Agent {
-  id: number;
-  name: string;
-  description: string;
-  status: string;
-  created_at: string;
-}
 
 const TEMPLATE_AGENTS = [
   { id: 'tpl-1', name: 'Customer Support Agent', description: 'Handles common inquiries, support tickets, and FAQs with a friendly tone.', rating: 4.8, users: '2.4k', category: 'Support', instructions: 'You are a helpful customer support agent. Answer questions politely and concisely. For orders, use the place_order function.' },
@@ -29,8 +22,6 @@ export default function Marketplace() {
   const [toast, setToast] = useState('');
   const [creating, setCreating] = useState<string | null>(null);
 
-  const { data: agents, loading: agentsLoading, refetch } = useApi<Agent[]>('/api/agents');
-
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(''), 3000);
@@ -47,7 +38,6 @@ export default function Marketplace() {
         voice: 'aura-2-odysseus-en',
         llm_model: 'gpt-4o-mini',
       });
-      refetch();
       showToast(`✅ "${tpl.name}" added to your agents!`);
     } catch {
       showToast('❌ Failed to create agent');
@@ -96,45 +86,6 @@ export default function Marketplace() {
             Filters
           </button>
         </div>
-
-        {/* Your Agents Section */}
-        <section className="mb-16">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-primary flex items-center gap-2">
-              <Bot size={24} className="text-secondary" />
-              Your Agents
-            </h2>
-          </div>
-          {agentsLoading ? (
-            <div className="text-center py-8"><Loader2 size={24} className="animate-spin text-secondary mx-auto" /></div>
-          ) : agents && agents.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {agents.map(agent => (
-                <motion.div key={agent.id} whileHover={{ y: -4 }} className="bg-surface-container-lowest p-6 rounded-3xl shadow-sm border border-outline-variant/10 flex flex-col">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="w-10 h-10 bg-secondary-fixed rounded-xl flex items-center justify-center text-secondary">
-                      <Bot size={20} />
-                    </div>
-                    <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${agent.status === 'published' ? 'bg-secondary-container text-secondary' : 'bg-surface-container text-on-surface-variant'}`}>
-                      {agent.status.toUpperCase()}
-                    </span>
-                  </div>
-                  <h3 className="text-lg font-bold text-primary mb-2 leading-tight">{agent.name}</h3>
-                  <p className="text-xs text-on-surface-variant mb-4 flex-1">{agent.description || 'No description set'}</p>
-                  <div className="flex items-center gap-1 text-[10px] text-on-surface-variant">
-                    <CheckCircle size={12} className="text-secondary" />
-                    Created {new Date(agent.created_at).toLocaleDateString()}
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 bg-surface-container-lowest rounded-2xl">
-              <Bot size={40} className="mx-auto mb-3 opacity-30" />
-              <p className="text-on-surface-variant font-medium">No agents yet — add one from templates below</p>
-            </div>
-          )}
-        </section>
 
         {/* Phone Numbers Section */}
         <section className="mb-16">

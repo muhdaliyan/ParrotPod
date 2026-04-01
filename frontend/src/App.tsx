@@ -6,6 +6,7 @@ import Workflows from './pages/Workflows';
 import Settings from './pages/Settings';
 import Integrations from './pages/Integrations';
 import Marketplace from './pages/Marketplace';
+import Inventory from './pages/Inventory';
 import Agent from './pages/Agent';
 
 export default function App() {
@@ -23,6 +24,8 @@ export default function App() {
         return <Integrations />;
       case 'marketplace':
         return <Marketplace />;
+      case 'inventory':
+        return <Inventory />;
       case 'agent':
         return <Agent />;
       default:

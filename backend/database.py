@@ -29,6 +29,8 @@ async def init_db():
                 llm_model TEXT DEFAULT 'gpt-4o-mini',
                 language TEXT DEFAULT 'en',
                 status TEXT DEFAULT 'draft',
+                phone_number TEXT DEFAULT '',
+                sip_dispatch_rule_id TEXT DEFAULT '',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
