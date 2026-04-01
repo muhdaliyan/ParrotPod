@@ -2,6 +2,12 @@
 
 Parrot Pod is an AI Voice Agent Builder that includes a Vite frontend and a FastAPI Python backend.
 
+## How It Works
+
+The diagram below shows the complete flow of how a Parrot Pod voice agent processes an incoming call — from SIP ingress through LiveKit, to the AI agent pipeline, and back to the caller.
+
+[![Agent Flow](frontend/public/flow.gif)](frontend/public/flow.gif)
+
 ## Quick Start (Recommended)
 
 You can install and run the entire application (both frontend and backend) using `npm` commands directly from the root directory.

@@ -55,13 +55,13 @@ export default function Sidebar({ currentTab, setCurrentTab }: SidebarProps) {
         <div className="p-3 bg-white rounded-2xl border border-outline-variant/10 shadow-sm flex items-center gap-3">
           <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-secondary/20">
             <img
-              src="/flag.png"
+              src="/user.png"
               alt="User profile"
               className="w-full h-full object-cover"
             />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-primary truncate">Free Palestine</p>
+            <p className="text-sm font-bold text-primary truncate">M Aliyan</p>
             <p className="text-[10px] text-on-surface-variant font-medium truncate">Pro Plan</p>
           </div>
         </div>
