@@ -9,6 +9,7 @@ Deepgram STT + OpenAI LLM + Deepgram TTS.
 """
 
 import os
+import time
 import asyncio
 import logging
 import json
@@ -21,6 +22,7 @@ from dotenv import load_dotenv
 from livekit import agents, rtc
 from livekit.agents import AgentServer, AgentSession, Agent, room_io, metrics
 from livekit.agents import AgentStateChangedEvent, MetricsCollectedEvent
+from livekit.agents import TurnHandlingOptions
 from livekit.agents import llm as lk_llm
 from livekit.agents import function_tool, RunContext
 from livekit.plugins import silero, deepgram
@@ -34,7 +36,8 @@ DATABASE_PATH = os.getenv("DATABASE_PATH", "./parrotpod.db")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
-UPLOAD_DIR = "./backend/uploads" # Fixed upload dir path for Docker
+# FIX #5: Use env var with sensible default instead of hardcoded path
+UPLOAD_DIR = os.getenv("UPLOAD_DIR", "./uploads")
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -132,7 +135,6 @@ async def send_telegram(agent_name: str, summary: str, items: list) -> bool:
 
 async def send_webhook(agent_config: dict, agent_name: str, session_room: str, summary: str, items: list) -> bool:
     """Send event data to configured webhook URL for CRM/Orders integrations."""
-    # Try agent config first, fallback to env variable
     url = agent_config.get("webhook_url") or WEBHOOK_URL
     if not url:
         return False
@@ -158,14 +160,12 @@ async def save_action(agent_id: int, session_room: str, summary: str, items: lis
     """Persist action/order to SQLite for dashboard metrics."""
     try:
         async with aiosqlite.connect(DATABASE_PATH) as db:
-            # Find session id
             cursor = await db.execute(
                 "SELECT id FROM sessions WHERE livekit_room = ?", (session_room,)
             )
             row = await cursor.fetchone()
             session_id = row[0] if row else None
 
-            # Saving to the generic 'orders' table (acts as actions log)
             await db.execute(
                 "INSERT INTO orders (agent_id, session_id, summary, items, telegram_sent) VALUES (?,?,?,?,?)",
                 (agent_id, session_id, summary, json.dumps(items), 1 if telegram_sent else 0)
@@ -173,6 +173,30 @@ async def save_action(agent_id: int, session_room: str, summary: str, items: lis
             await db.commit()
     except Exception as e:
         logger.error(f"[DB] Failed to save action: {e}")
+
+
+# ─── LLM Warmup ───────────────────────────────────────────────────────────────
+
+async def warmup_llm(model: str):
+    """
+    FIX #6: Fire a tiny dummy request to pre-heat the OpenAI connection.
+    Eliminates the 7+ second cold start TTFT on the first real turn.
+    """
+    try:
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={"Authorization": f"Bearer {os.getenv('OPENAI_API_KEY', '')}"},
+                json={
+                    "model": model,
+                    "max_tokens": 1,
+                    "messages": [{"role": "user", "content": "hi"}]
+                },
+                timeout=5,
+            )
+            logger.debug("[Warmup] LLM connection pre-heated")
+    except Exception:
+        pass  # Warmup failure is non-fatal
 
 
 # ─── Agent Class ──────────────────────────────────────────────────────────────
@@ -187,9 +211,8 @@ class ParrotPodAgent(Agent):
         self._last_action_time = 0.0
         self._last_action_summary = ""
 
-        # Build system instructions
         base_instructions = agent_config.get("instructions", "You are a helpful AI voice assistant.")
-        
+
         knowledge_block = ""
         if knowledge_context:
             knowledge_block = f"""
@@ -224,13 +247,13 @@ RULES:
         """
         Search the knowledge base for information.
         Call this when the user asks about products, services, prices, menu, or any factual info.
-        
+
         Args:
             query: What the user is asking about
         """
-        await context.session.generate_reply(
-            instructions="Say 'Let me check that for you, one moment...' in a natural way."
-        )
+        # FIX #4: Use say() instead of generate_reply() inside a tool to avoid
+        # race conditions and potential double-speech in the audio pipeline.
+        await context.session.say("Let me check that for you, one moment.")
 
         if not self.knowledge_context:
             return {"found": False, "message": "No knowledge base configured"}
@@ -249,7 +272,7 @@ RULES:
         """
         Record a customer action (e.g., placing an order, booking an appointment, capturing a lead).
         Triggers external notifications like Telegram and Webhooks to the admin.
-        
+
         Args:
             item: List of items, services, or entities requested (e.g., ["Coffee", "Muffin"] or ["Dentist Appointment"])
             quantity: List of quantities matching the items (e.g., [1, 2]). Use [1] for non-quantifiable things like appointments.
@@ -261,8 +284,7 @@ RULES:
             item = [item]
         if isinstance(quantity, int):
             quantity = [quantity]
-        
-        # Best effort zip if lengths mismatch
+
         max_len = max(len(item), len(quantity))
         item += ["Unknown"] * (max_len - len(item))
         quantity += [1] * (max_len - len(quantity))
@@ -272,23 +294,16 @@ RULES:
         if notes:
             summary += f" | Notes: {notes}"
 
-        # ── Debounce: Prevent duplicate LLM executions
-        import time
+        # FIX #3: time is now imported at the top of the file
         current_time = time.time()
         if (current_time - self._last_action_time) < 5.0 and self._last_action_summary == summary:
             return {"status": "success", "message": "Already recorded."}
-        
+
         self._last_action_time = current_time
         self._last_action_summary = summary
-        # ───────────────────────────────────────────
 
-        # 1. Telegram
         sent_tg = await send_telegram(self.agent_name, summary, action_items)
-        
-        # 2. Webhook
         sent_wh = await send_webhook(self.agent_config, self.agent_name, self.room_name, summary, action_items)
-        
-        # 3. Database
         await save_action(self.agent_id, self.room_name, summary, action_items, sent_tg)
 
         return {
@@ -322,7 +337,7 @@ async def entrypoint(ctx: agents.JobContext):
     agent_id = 1
     caller_id = "test"
 
-    # Try SIP pattern: parrotpod-agent-{id}-_{phone}_{random}
+    # Parse room name to extract agent_id and caller_id
     sip_match = re.search(r"parrotpod-agent-(\d+)-_(\+?\d+)_", room_name)
     if sip_match:
         agent_id = int(sip_match.group(1))
@@ -334,7 +349,7 @@ async def entrypoint(ctx: agents.JobContext):
 
     logger.info(f"[Worker] Starting session for agent_id={agent_id}, caller_id={caller_id}, room={room_name}")
 
-    # Ensure session record exists (SIP calls arrive without a pre-created session)
+    # Ensure session record exists
     try:
         async with aiosqlite.connect(DATABASE_PATH) as db:
             cursor = await db.execute(
@@ -370,6 +385,13 @@ async def entrypoint(ctx: agents.JobContext):
     lang_map = {"en": "en-US", "ur": "ur", "ar": "ar", "es": "es", "fr": "fr"}
     dg_language = lang_map.get(lang, "en-US")
 
+    # FIX #6: Kick off LLM warmup in background — runs while session initializes
+    asyncio.create_task(warmup_llm(llm_model))
+
+    # FIX #1: Use TurnHandlingOptions to force VAD interruption mode.
+    # This bypasses agent-gateway.livekit.cloud entirely, which times out
+    # at 0.7s due to latency from Pakistan → no more broken/choppy audio.
+    # Dynamic endpointing adapts to each speaker's natural pause rhythm.
     session = AgentSession(
         stt=deepgram.STT(
             model="nova-2-general",
@@ -391,21 +413,23 @@ async def entrypoint(ctx: agents.JobContext):
             activation_threshold=0.45,
             deactivation_threshold=0.35,
         ),
+        turn_handling=TurnHandlingOptions(
+            interruption={"mode": "vad"},
+            endpointing={"mode": "dynamic", "min_delay": 0.3, "max_delay": 2.5},
+        ),
     )
 
-    import time
     start_time = time.time()
     usage_collector = metrics.UsageCollector()
 
-    @session.on("metrics_collected")
-    def _on_metrics(ev: MetricsCollectedEvent):
-        metrics.log_metrics(ev.metrics)
-        usage_collector.collect(ev.metrics)
+    # FIX #2: Replace deprecated metrics_collected with session_usage_updated
+    @session.on("session_usage_updated")
+    def _on_usage(ev):
+        usage_collector.collect(ev.usage)
 
     async def log_usage():
         summary = usage_collector.get_summary()
         logger.info(f"[Usage] {summary}")
-        # Record real duration in DB
         duration = int(time.time() - start_time)
         try:
             async with aiosqlite.connect(DATABASE_PATH) as db:
@@ -428,4 +452,3 @@ async def entrypoint(ctx: agents.JobContext):
 
 if __name__ == "__main__":
     agents.cli.run_app(server)
-
