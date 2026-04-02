@@ -33,25 +33,41 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
 # Register routers
-app.include_router(agents.router)
-app.include_router(files.router)
-app.include_router(sessions.router)
-app.include_router(notifications.router)
-app.include_router(dashboard.router)
-app.include_router(telephony.router)
-
-
-@app.get("/")
-async def root():
-    return {
-        "name": "Parrot Pod API",
-        "version": "1.0.0",
-        "status": "running",
-        "docs": "/docs",
-    }
+app.include_router(agents.router, prefix="/api")
+app.include_router(files.router, prefix="/api")
+app.include_router(sessions.router, prefix="/api")
+app.include_router(notifications.router, prefix="/api")
+app.include_router(dashboard.router, prefix="/api")
+app.include_router(telephony.router, prefix="/api")
 
 
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+# Serve static files from frontend/dist
+# Note: In Render, the frontend folder is a sibling of the backend folder
+frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+
+if os.path.exists(frontend_path):
+    app.mount("/assets", StaticFiles(directory=os.path.join(frontend_path, "assets")), name="static")
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        # If the path looks like an API call, it will be handled by routers above.
+        # Otherwise, serve the frontend index.html for SPA routing.
+        return FileResponse(os.path.join(frontend_path, "index.html"))
+else:
+    @app.get("/")
+    async def root():
+        return {
+            "name": "Parrot Pod API",
+            "version": "1.0.0",
+            "status": "running",
+            "message": "Frontend not found at " + frontend_path
+        }
