@@ -1,0 +1,33 @@
+services:
+  # ─── Backend Service (FastAPI + Voice Agent) ──────────
+  - type: web
+    name: parrotpod-api
+    env: python
+    buildCommand: "cd backend && pip install -r requirements.txt"
+    startCommand: "cd backend && chmod +x render_start.sh && ./render_start.sh"
+    envVars:
+      - key: DATABASE_PATH
+        value: "/opt/render/project/src/backend/data/parrotpod.db"
+      - key: FRONTEND_URL
+        fromService:
+          name: parrotpod-web
+          type: static
+          property: host
+    # For persistence across redeployments, consider attaching a Disk ($5/mo)
+    # disk:
+    #   name: parrotpod-data
+    #   mountPath: /opt/render/project/src/backend/data
+    #   sizeGB: 1
+
+  # ─── Frontend (Static Site) ──────────────────────────
+  - type: static
+    name: parrotpod-web
+    env: node
+    buildCommand: "cd frontend && npm install && npm run build"
+    publishPath: "frontend/dist"
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          name: parrotpod-api
+          type: web
+          property: host

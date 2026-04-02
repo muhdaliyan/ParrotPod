@@ -15,3 +15,5 @@ livekit-plugins-silero
 livekit-api
 openai
 deepgram-sdk
+gunicorn
+uvicorn[standard]
