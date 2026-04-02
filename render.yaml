@@ -12,6 +12,11 @@ services:
         value: 10000
       - key: DATABASE_PATH
         value: "/app/backend/parrotpod.db"
+      - key: FRONTEND_URL
+        fromService:
+          name: parrotpod-full
+          type: web
+          property: host
     # To keep database data across redeployments: ($5/mo)
     # disk:
     #   name: parrotpod-data

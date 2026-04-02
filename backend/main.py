@@ -37,12 +37,12 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 # Register routers
-app.include_router(agents.router, prefix="/api")
-app.include_router(files.router, prefix="/api")
-app.include_router(sessions.router, prefix="/api")
-app.include_router(notifications.router, prefix="/api")
-app.include_router(dashboard.router, prefix="/api")
-app.include_router(telephony.router, prefix="/api")
+app.include_router(agents.router)
+app.include_router(files.router)
+app.include_router(sessions.router)
+app.include_router(notifications.router)
+app.include_router(dashboard.router)
+app.include_router(telephony.router)
 
 
 @app.get("/health")
@@ -59,8 +59,12 @@ if os.path.exists(frontend_path):
 
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
-        # If the path looks like an API call, it will be handled by routers above.
-        # Otherwise, serve the frontend index.html for SPA routing.
+        # 1. Check if the file exists in dist/ (e.g. favicon.ico, manifest.json)
+        file_path = os.path.join(frontend_path, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        
+        # 2. Otherwise serve index.html for SPA routing
         return FileResponse(os.path.join(frontend_path, "index.html"))
 else:
     @app.get("/")
