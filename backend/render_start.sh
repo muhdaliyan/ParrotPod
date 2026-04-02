@@ -1,7 +1,7 @@
 #!/bin/bash
 # Start the voice agent worker in the background
 echo "[RENDER] Starting Voice Agent Worker..."
-python voice_agent.py dev &
+python voice_agent.py start &
 
 # Start the FastAPI server using Gunicorn and Uvicorn workers
 echo "[RENDER] Starting FastAPI Server..."

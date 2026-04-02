@@ -27,14 +27,14 @@ from livekit.plugins import silero, deepgram
 from livekit.plugins import openai as lk_openai
 
 load_dotenv()
-
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 DATABASE_PATH = os.getenv("DATABASE_PATH", "./parrotpod.db")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
-UPLOAD_DIR = "./uploads"
+UPLOAD_DIR = "./backend/uploads" # Fixed upload dir path for Docker
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────

@@ -10,9 +10,11 @@ RUN npm run build
 FROM python:3.11-slim
 WORKDIR /app
 
-# Install system dependencies if needed (e.g., for sqlite or other libs)
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    libgomp1 \
+    libasound2 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy backend requirements and install
