@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Mic, MicOff, Loader2, Volume2, AlertCircle, Radio } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { API_BASE_URL } from '../hooks/useApi';
 import {
   Room,
   RoomEvent,
@@ -274,7 +275,7 @@ export default function VoiceTestModal({ agentId, agentName, onClose }: VoiceTes
 
     try {
       // 1. Get token from backend
-      const res = await fetch(`http://localhost:8000/api/agents/${agentId}/token`, {
+      const res = await fetch(`${API_BASE_URL}/api/agents/${agentId}/token`, {
         method: 'POST',
       });
       if (!res.ok) {
@@ -305,7 +306,7 @@ export default function VoiceTestModal({ agentId, agentName, onClose }: VoiceTes
         // Record duration
         if (sessionIdRef.current && sessionStartRef.current) {
           const duration = Math.round((Date.now() - sessionStartRef.current) / 1000);
-          fetch(`http://localhost:8000/api/sessions/${sessionIdRef.current}/end?duration=${duration}`, {
+          fetch(`${API_BASE_URL}/api/sessions/${sessionIdRef.current}/end?duration=${duration}`, {
             method: 'PATCH',
           }).catch(() => {});
         }
