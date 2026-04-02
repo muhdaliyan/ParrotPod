@@ -379,7 +379,7 @@ export default function VoiceTestModal({ agentId, agentName, onClose }: VoiceTes
     // Record duration before disconnecting
     if (sessionIdRef.current && sessionStartRef.current) {
       const duration = Math.round((Date.now() - sessionStartRef.current) / 1000);
-      fetch(`http://localhost:8000/api/sessions/${sessionIdRef.current}/end?duration=${duration}`, {
+      fetch(`${API_BASE_URL}/api/sessions/${sessionIdRef.current}/end?duration=${duration}`, {
         method: 'PATCH',
       }).catch(() => {});
       sessionIdRef.current = 0;
