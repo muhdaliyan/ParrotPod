@@ -437,7 +437,6 @@ async def entrypoint(ctx: agents.JobContext):
             model=llm_model,
             tool_choice="auto",
             temperature=0.7,
-            max_tokens=150,     # voice replies should be short — reduces "slow audio gen" flushes
         ),
         tts=deepgram.TTS(
             model=voice_model,
