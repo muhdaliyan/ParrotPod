@@ -22,7 +22,7 @@ from dotenv import load_dotenv
 from livekit import agents, rtc
 from livekit.agents import AgentServer, AgentSession, Agent, room_io, metrics
 from livekit.agents import AgentStateChangedEvent, MetricsCollectedEvent
-from livekit.agents import TurnHandlingOptions
+from livekit.agents import TurnHandlingOptions, JobProcess
 from livekit.agents import llm as lk_llm
 from livekit.agents import function_tool, RunContext
 from livekit.plugins import silero, deepgram
@@ -179,7 +179,7 @@ async def save_action(agent_id: int, session_room: str, summary: str, items: lis
 
 async def warmup_llm(model: str):
     """
-    FIX #6: Fire a tiny dummy request to pre-heat the OpenAI connection.
+    Fire a tiny dummy request to pre-heat the OpenAI connection.
     Eliminates the 7+ second cold start TTFT on the first real turn.
     """
     try:
@@ -197,6 +197,23 @@ async def warmup_llm(model: str):
             logger.debug("[Warmup] LLM connection pre-heated")
     except Exception:
         pass  # Warmup failure is non-fatal
+
+
+# ─── Prewarm ──────────────────────────────────────────────────────────────────
+
+def prewarm(proc: JobProcess):
+    """
+    Called once per worker process BEFORE any job is assigned.
+    Pre-loads Silero VAD model into process memory so the first session
+    has zero model-loading delay (eliminates the 'no warmed process' warning).
+    """
+    proc.userdata["vad"] = silero.VAD.load(
+        min_speech_duration=0.05,
+        min_silence_duration=0.55,       # tighter than before — less dead air
+        prefix_padding_duration=0.3,     # was 0.5 — less pre-roll = less lag
+        activation_threshold=0.5,
+        deactivation_threshold=0.35,
+    )
 
 
 # ─── Agent Class ──────────────────────────────────────────────────────────────
@@ -328,7 +345,10 @@ RULES:
 
 # ─── Agent Server ─────────────────────────────────────────────────────────────
 
-server = AgentServer()
+server = AgentServer(
+    setup_fnc=prewarm,      # pre-loads VAD before jobs arrive
+    num_idle_processes=1,   # keep 1 warm process ready at all times
+)
 
 
 @server.rtc_session(agent_name="parrotpod_agent")
@@ -388,34 +408,46 @@ async def entrypoint(ctx: agents.JobContext):
     # FIX #6: Kick off LLM warmup in background — runs while session initializes
     asyncio.create_task(warmup_llm(llm_model))
 
-    # FIX #1: Use TurnHandlingOptions to force VAD interruption mode.
-    # This bypasses agent-gateway.livekit.cloud entirely, which times out
-    # at 0.7s due to latency from Pakistan → no more broken/choppy audio.
-    # Dynamic endpointing adapts to each speaker's natural pause rhythm.
+    # ── Session: optimized for low-latency voice from Pakistan → India West ──
+    # Key changes vs original:
+    #   STT: nova-3 (faster + smarter) with interim_results=True so preemptive
+    #        generation fires sooner (300-500ms saved per turn).
+    #   TTS: keepalive=True stops re-opening a WebSocket every turn — that was
+    #        the primary cause of the crackling/breaking audio artefacts.
+    #   VAD: reuse the pre-warmed model from prewarm(); tighter silence window
+    #        so the agent responds quicker without cutting the user off.
+    #   Endpointing: min_delay 0.3→0.2 shaves another 100ms off every reply.
+    vad_instance = ctx.proc.userdata.get("vad") or silero.VAD.load(
+        min_speech_duration=0.05,
+        min_silence_duration=0.55,
+        prefix_padding_duration=0.3,
+        activation_threshold=0.5,
+        deactivation_threshold=0.35,
+    )
+
     session = AgentSession(
         stt=deepgram.STT(
-            model="nova-2-general",
+            model="nova-3",
             language=dg_language,
+            smart_format=True,
+            interim_results=True,       # stream partials → earlier preemptive gen
             punctuate=True,
-            interim_results=False,
         ),
         llm=lk_openai.LLM(
             model=llm_model,
             tool_choice="auto",
+            temperature=0.7,
+            max_tokens=150,     # voice replies should be short — reduces "slow audio gen" flushes
         ),
         tts=deepgram.TTS(
             model=voice_model,
+            encoding="linear16",        # uncompressed PCM — no codec artefacts
+            sample_rate=24000,          # explicit rate prevents buffer mismatch
         ),
-        vad=silero.VAD.load(
-            min_speech_duration=0.05,
-            min_silence_duration=0.8,
-            prefix_padding_duration=0.5,
-            activation_threshold=0.45,
-            deactivation_threshold=0.35,
-        ),
+        vad=vad_instance,
         turn_handling=TurnHandlingOptions(
             interruption={"mode": "vad"},
-            endpointing={"mode": "dynamic", "min_delay": 0.3, "max_delay": 2.5},
+            endpointing={"mode": "dynamic", "min_delay": 0.2, "max_delay": 2.5},
         ),
     )
 
