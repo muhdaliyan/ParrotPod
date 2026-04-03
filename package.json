@@ -6,12 +6,13 @@
     "setup:all": "npm run setup:frontend && npm run setup:backend",
     "setup:frontend": "cd frontend && npm install",
     "setup:backend": "cd backend && python -m venv venv && venv\\Scripts\\python -m pip install --upgrade pip && venv\\Scripts\\pip install -r requirements.txt",
-    "dev": "start http://localhost:3000 && npx concurrently -k -n \"BACKEND,FRONTEND,VOICE\" -c \"blue,green,magenta\" \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:voice\"",
+    "dev": "npx concurrently -n \"BACKEND,FRONTEND,VOICE,BROWSER\" -c \"blue,green,magenta,white\" \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:voice\" \"npx wait-on http://localhost:3000 && start http://localhost:3000\"",
     "dev:backend": "cd backend && venv\\Scripts\\python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:voice": "cd backend && venv\\Scripts\\python voice_agent.py dev"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "wait-on": "^9.0.4"
   }
 }

@@ -237,35 +237,7 @@ export default function VoiceTestModal({ agentId, agentName, onClose }: VoiceTes
   }, []);
 
   // Wire a remote audio element and analyser to the agent's audio track
-  const attachAgentAudio = useCallback(
-    (publication: RemoteTrackPublication) => {
-      if (publication.track?.kind !== Track.Kind.Audio) return;
-      const mediaTrack = publication.track.mediaStreamTrack;
-      if (!mediaTrack) return;
-
-      const audioEl = publication.track.attach() as HTMLAudioElement;
-      audioEl.autoplay = true;
-      audioEl.volume = 1;
-      document.body.appendChild(audioEl);
-
-      try {
-        const ctx = audioCtxRef.current ?? new AudioContext();
-        audioCtxRef.current = ctx;
-        const stream = new MediaStream([mediaTrack]);
-        const source = ctx.createMediaStreamSource(stream);
-        const analyser = ctx.createAnalyser();
-        analyser.fftSize = 512;
-        analyser.smoothingTimeConstant = 0.5;
-        source.connect(analyser);
-        agentAnalyserRef.current = analyser; // energy polling now takes over status
-        stopIdleAnim();
-        animateBars(analyser, agentBarsRef, agentSvgRef, agentAnimRef);
-      } catch {
-        // analyser optional
-      }
-    },
-    [animateBars]
-  );
+  // (Logic moved to TrackSubscribed for better management)
 
   const startSession = useCallback(async () => {
     setStatus('connecting');
@@ -317,26 +289,57 @@ export default function VoiceTestModal({ agentId, agentName, onClose }: VoiceTes
       });
 
       // Remote participant (the agent) events
-      room.on(RoomEvent.ParticipantConnected, (participant: RemoteParticipant) => {
+      room.on(RoomEvent.ParticipantConnected, () => {
         stopRingTone();  // agent picked up!
         setStatus('listening');
-
-        // Subscribe to their tracks
-        participant.trackPublications.forEach((pub) => {
-          if (pub.isSubscribed) attachAgentAudio(pub as RemoteTrackPublication);
-        });
       });
 
-      room.on(RoomEvent.TrackSubscribed, (_track, publication, _participant) => {
-        stopRingTone();  // stop ring — audio is incoming
-        attachAgentAudio(publication as RemoteTrackPublication);
-        // Status transitions handled by energy polling
+      room.on(RoomEvent.TrackSubscribed, (track, _publication, _participant) => {
+        if (track.kind === Track.Kind.Audio) {
+          stopRingTone();  // stop ring — audio is incoming
+          
+          // Use track.attach() but ensure we don't duplicate
+          // First, check if already attached
+          const existing = document.querySelector(`audio[data-track-id="${track.sid}"]`);
+          if (existing) return;
+
+          const audioEl = track.attach() as HTMLAudioElement;
+          audioEl.setAttribute('data-track-id', track.sid);
+          audioEl.autoplay = true;
+          document.body.appendChild(audioEl);
+
+          // Analyser setup
+          try {
+            const ctx = audioCtxRef.current ?? new AudioContext();
+            audioCtxRef.current = ctx;
+            const stream = new MediaStream([track.mediaStreamTrack!]);
+            const source = ctx.createMediaStreamSource(stream);
+            const analyser = ctx.createAnalyser();
+            analyser.fftSize = 512;
+            analyser.smoothingTimeConstant = 0.5;
+            source.connect(analyser);
+            agentAnalyserRef.current = analyser;
+            stopIdleAnim();
+            animateBars(analyser, agentBarsRef, agentSvgRef, agentAnimRef);
+          } catch (e) {
+            console.error('Failed to attach analyser:', e);
+          }
+        }
       });
 
-      room.on(RoomEvent.TrackUnsubscribed, () => {
-        // Just stop animations; energy polling will set 'listening' after silence
+      room.on(RoomEvent.TrackUnsubscribed, (track) => {
+        // Stop animations
         stopAnimating(agentAnimRef, agentBarsRef, agentSvgRef);
         startIdleAnim(agentSvgRef, agentBarsRef);
+        
+        // Detach and remove audio element
+        if (track.kind === Track.Kind.Audio) {
+          const el = document.querySelector(`audio[data-track-id="${track.sid}"]`);
+          if (el) {
+            (track as any).detach(el);
+            el.remove();
+          }
+        }
       });
 
       // ActiveSpeakersChanged is intentionally not used for speaking/listening
@@ -373,7 +376,7 @@ export default function VoiceTestModal({ agentId, agentName, onClose }: VoiceTes
       setErrorMsg(msg);
       setStatus('error');
     }
-  }, [agentId, agentName, animateBars, stopAnimating, attachAgentAudio]);
+  }, [agentId, agentName, animateBars, stopAnimating]);
 
   const endSession = useCallback(async () => {
     // Record duration before disconnecting

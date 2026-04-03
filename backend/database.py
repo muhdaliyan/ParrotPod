@@ -31,6 +31,9 @@ async def init_db():
                 status TEXT DEFAULT 'draft',
                 phone_number TEXT DEFAULT '',
                 sip_dispatch_rule_id TEXT DEFAULT '',
+                telegram_enabled INTEGER DEFAULT 1,
+                webhook_enabled INTEGER DEFAULT 0,
+                webhook_url TEXT DEFAULT '',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )

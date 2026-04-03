@@ -12,7 +12,10 @@ class AgentCreate(BaseModel):
     welcome_message: str = Field(default="Hello! How can I help you today?")
     voice: str = Field(default="aura-2-odysseus-en")
     llm_model: str = Field(default="gpt-4o-mini")
-    language: str = Field(default="en")
+    language: str = Field(default="en-US")
+    telegram_enabled: bool = Field(default=True)
+    webhook_enabled: bool = Field(default=False)
+    webhook_url: str = Field(default="")
 
 
 class AgentUpdate(BaseModel):
@@ -26,6 +29,9 @@ class AgentUpdate(BaseModel):
     status: Optional[str] = None
     phone_number: Optional[str] = None
     sip_dispatch_rule_id: Optional[str] = None
+    telegram_enabled: Optional[bool] = None
+    webhook_enabled: Optional[bool] = None
+    webhook_url: Optional[str] = None
 
 
 class AgentOut(BaseModel):
@@ -40,6 +46,9 @@ class AgentOut(BaseModel):
     status: str
     phone_number: str
     sip_dispatch_rule_id: str
+    telegram_enabled: bool
+    webhook_enabled: bool
+    webhook_url: str
     created_at: str
     updated_at: str
 

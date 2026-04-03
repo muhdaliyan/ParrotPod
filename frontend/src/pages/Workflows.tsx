@@ -16,6 +16,9 @@ interface Agent {
   status: string;
   phone_number: string;
   sip_dispatch_rule_id: string;
+  telegram_enabled: boolean;
+  webhook_enabled: boolean;
+  webhook_url: string;
 }
 
 interface KnowledgeFile {
@@ -63,10 +66,12 @@ export default function Workflows() {
   // Local editable state for the active agent
   const [form, setForm] = useState({
     name: '', description: '', instructions: '', welcome_message: '', voice: '', llm_model: '',
+    telegram_enabled: true, webhook_enabled: false, webhook_url: '',
   });
 
   const [createForm, setCreateForm] = useState({
-    name: '', description: '', instructions: 'You are a helpful AI voice assistant.', welcome_message: 'Hello! How can I help you today?', voice: 'aura-2-luna-en', llm_model: 'gpt-4o-mini', language: 'en'
+    name: '', description: '', instructions: 'You are a helpful AI voice assistant.', welcome_message: 'Hello! How can I help you today?', voice: 'aura-2-luna-en', llm_model: 'gpt-4o-mini', language: 'en',
+    telegram_enabled: true, webhook_enabled: false, webhook_url: '',
   });
 
   useEffect(() => {
@@ -78,6 +83,9 @@ export default function Workflows() {
         welcome_message: activeAgent.welcome_message,
         voice: activeAgent.voice,
         llm_model: activeAgent.llm_model,
+        telegram_enabled: activeAgent.telegram_enabled,
+        webhook_enabled: activeAgent.webhook_enabled,
+        webhook_url: activeAgent.webhook_url,
       });
     }
   }, [activeAgent?.id]);
@@ -145,7 +153,8 @@ export default function Workflows() {
       setShowCreateModal(false);
       // Reset form
       setCreateForm({
-        name: '', description: '', instructions: 'You are a helpful AI voice assistant.', welcome_message: 'Hello! How can I help you today?', voice: 'aura-2-luna-en', llm_model: 'gpt-4o-mini', language: 'en'
+        name: '', description: '', instructions: 'You are a helpful AI voice assistant.', welcome_message: 'Hello! How can I help you today?', voice: 'aura-2-luna-en', llm_model: 'gpt-4o-mini', language: 'en',
+        telegram_enabled: true, webhook_enabled: false, webhook_url: '',
       });
     } catch (err) {
       console.error('Create failed', err);
@@ -593,19 +602,24 @@ export default function Workflows() {
                           </div>
                           <div>
                             <h4 className="font-bold text-primary text-sm">Telegram Bot</h4>
-                            <p className="text-[10px] text-on-surface-variant">Already integrated via backend</p>
+                            <p className="text-[10px] text-on-surface-variant">Admin Notifications</p>
                           </div>
                         </div>
                         <label className="flex items-center cursor-pointer">
                           <div className="relative">
-                            <input type="checkbox" className="peer sr-only" defaultChecked={true} />
+                            <input
+                              type="checkbox"
+                              className="peer sr-only"
+                              checked={form.telegram_enabled}
+                              onChange={(e) => setForm({ ...form, telegram_enabled: e.target.checked })}
+                            />
                             <div className="block w-12 h-7 rounded-full bg-surface-container-highest peer-checked:bg-secondary transition-colors"></div>
                             <div className="dot absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition transform peer-checked:translate-x-5 shadow-sm"></div>
                           </div>
                         </label>
                       </div>
                       <p className="text-xs text-on-surface-variant mt-3 bg-white/50 p-3 rounded-xl border border-outline-variant/10">
-                        When enabled, ParrotPod agents will automatically process incoming text/voice messages from your connected Telegram bot.
+                        When enabled, ParrotPod will send a notification to your Telegram bot whenever this agent records an action or order.
                       </p>
                     </div>
 
@@ -617,33 +631,36 @@ export default function Workflows() {
                           </div>
                           <div>
                             <h4 className="font-bold text-primary text-sm">Outbound Webhooks</h4>
-                            <p className="text-[10px] text-on-surface-variant">Send order data to external APIs</p>
+                            <p className="text-[10px] text-on-surface-variant">External API Integration</p>
                           </div>
                         </div>
                         <label className="flex items-center cursor-pointer">
                           <div className="relative">
-                            <input type="checkbox" className="peer sr-only" defaultChecked={false} onChange={(e) => {
-                              const el = document.getElementById('webhook-container');
-                              if (el) el.style.opacity = e.target.checked ? '1' : '0.4';
-                            }} />
+                            <input
+                              type="checkbox"
+                              className="peer sr-only"
+                              checked={form.webhook_enabled}
+                              onChange={(e) => setForm({ ...form, webhook_enabled: e.target.checked })}
+                            />
                             <div className="block w-12 h-7 rounded-full bg-surface-container-highest peer-checked:bg-secondary transition-colors"></div>
                             <div className="dot absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition transform peer-checked:translate-x-5 shadow-sm"></div>
                           </div>
                         </label>
                       </div>
-                      
-                      <div id="webhook-container" className="space-y-3 transition-opacity" style={{ opacity: 0.4 }}>
+
+                      <div className={`space-y-3 transition-opacity ${form.webhook_enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
                         <div className="space-y-1">
                           <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Webhook URL</label>
                           <input
                             type="url"
                             placeholder="https://your-api.com/webhook/receive"
-                            defaultValue="https://api.example.com/orders"
+                            value={form.webhook_url}
+                            onChange={(e) => setForm({ ...form, webhook_url: e.target.value })}
                             className="w-full bg-white border border-outline-variant/20 rounded-xl px-4 py-2.5 text-primary text-sm font-medium outline-none focus:ring-2 focus:ring-secondary"
                           />
                         </div>
                         <p className="text-[11px] text-on-surface-variant pt-1 leading-relaxed">
-                          Whenever the agent completes a tool call like <span className="font-bold">PlaceOrder</span> or collects structured form data, a POST request will be sent to this URL with the JSON payload.
+                          Whenever the agent completes a tool call like <span className="font-bold">PlaceOrder</span>, a POST request will be sent to this URL with a rich JSON payload.
                         </p>
                       </div>
                     </div>

@@ -103,8 +103,12 @@ async def load_agent_files(agent_id: int) -> str:
     return "\n\n".join(context_parts)
 
 
-async def send_telegram(agent_name: str, summary: str, items: list) -> bool:
+async def send_telegram(agent_config: dict, agent_name: str, summary: str, items: list) -> bool:
     """Send order/event summary to Telegram."""
+    if not agent_config.get("telegram_enabled", 1):
+        logger.info(f"[Telegram] Disabled for agent '{agent_name}'")
+        return False
+
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         return False
 
@@ -133,23 +137,37 @@ async def send_telegram(agent_name: str, summary: str, items: list) -> bool:
         return False
 
 
-async def send_webhook(agent_config: dict, agent_name: str, session_room: str, summary: str, items: list) -> bool:
+async def send_webhook(agent_config: dict, agent_name: str, session_room: str, summary: str, items: list, action_type: str = "general", notes: str = "") -> bool:
     """Send event data to configured webhook URL for CRM/Orders integrations."""
+    if not agent_config.get("webhook_enabled", 0):
+        return False
+
     url = agent_config.get("webhook_url") or WEBHOOK_URL
     if not url:
         return False
 
     payload = {
-        "agent": agent_name,
-        "room": session_room,
-        "summary": summary,
-        "items": items,
-        "event_type": "action_triggered"
+        "event": "action_triggered",
+        "timestamp": time.time(),
+        "agent": {
+            "id": agent_config.get("id"),
+            "name": agent_name,
+        },
+        "session": {
+            "room": session_room,
+        },
+        "data": {
+            "type": action_type,
+            "summary": summary,
+            "items": items,
+            "notes": notes
+        }
     }
 
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.post(url, json=payload, timeout=10)
+            logger.info(f"[Webhook] Sent to {url}, status: {resp.status_code}")
             return resp.status_code in (200, 201, 202)
     except Exception as e:
         logger.error(f"[Webhook] Failed to send to {url}: {e}")
@@ -238,17 +256,15 @@ KNOWLEDGE BASE (use this to answer questions):
 ---
 {knowledge_context}
 ---
-RULES:
-- ALWAYS search the knowledge base before answering questions about products, services, prices, or info.
-- If user explicitly orders items, books an appointment, or makes a strong request, call the trigger_action function.
-- If you need to search for info, call lookup_info first, then reply "Let me check that for you..." while searching.
-- Keep responses SHORT and CONVERSATIONAL (max 2-3 sentences for voice).
+- SEARCH the knowledge base for products, services, prices, menu, or factual info.
+- If user orders, books, or makes a strong request, CALL trigger_action.
+- Keep responses VERY SHORT and CONVERSATIONAL (max 2-3 sentences).
+- Answer questions directly using the knowledge base.
 """
 
         full_instructions = f"{base_instructions}{knowledge_block}"
 
         initial_ctx = lk_llm.ChatContext()
-        initial_ctx.add_message(role="user", content="[session started]")
 
         super().__init__(
             instructions=full_instructions,
@@ -257,7 +273,7 @@ RULES:
 
     async def on_enter(self):
         welcome = self.agent_config.get("welcome_message", "Hello! How can I help you today?")
-        await self.session.generate_reply(instructions=f"Say exactly: '{welcome}'")
+        await self.session.say(welcome, allow_interruptions=True)
 
     @function_tool()
     async def lookup_info(self, context: RunContext, query: str) -> dict:
@@ -268,10 +284,6 @@ RULES:
         Args:
             query: What the user is asking about
         """
-        # FIX #4: Use say() instead of generate_reply() inside a tool to avoid
-        # race conditions and potential double-speech in the audio pipeline.
-        await context.session.say("Let me check that for you, one moment.")
-
         if not self.knowledge_context:
             return {"found": False, "message": "No knowledge base configured"}
 
@@ -319,8 +331,8 @@ RULES:
         self._last_action_time = current_time
         self._last_action_summary = summary
 
-        sent_tg = await send_telegram(self.agent_name, summary, action_items)
-        sent_wh = await send_webhook(self.agent_config, self.agent_name, self.room_name, summary, action_items)
+        sent_tg = await send_telegram(self.agent_config, self.agent_name, summary, action_items)
+        sent_wh = await send_webhook(self.agent_config, self.agent_name, self.room_name, summary, action_items, action_type, notes)
         await save_action(self.agent_id, self.room_name, summary, action_items, sent_tg)
 
         return {
