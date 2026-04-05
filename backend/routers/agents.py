@@ -134,19 +134,58 @@ async def chat_with_ai(payload: ChatRequest):
             Ensure your output is beautiful when rendered in a chat UI."""
         }
         
-        # Build prompt from provided history or just use current message
-        messages = [system_msg]
-        if payload.history:
-            messages.extend(payload.history[-10:]) # last 10 messages for context
-        messages.append({"role": "user", "content": payload.message})
-        
+        # 1. Save user message to DB
+        db = await get_db()
+        await db.execute(
+            "INSERT INTO chat_history (role, content) VALUES ('user', ?)",
+            (payload.message,)
+        )
+        await db.commit()
+
+        # 2. Build history for LLM
+        cursor = await db.execute("SELECT role, content FROM chat_history ORDER BY id DESC LIMIT 20")
+        rows = await cursor.fetchall()
+        db_history = [{"role": r["role"], "content": r["content"]} for r in reversed(rows)]
+
         response = client.chat.completions.create(
             model=model,
-            messages=messages,
+            messages=db_history,
             max_tokens=800,
             temperature=0.7
         )
-        return ChatResponse(content=response.choices[0].message.content)
+        ai_content = response.choices[0].message.content
+
+        # 3. Save assistant response to DB
+        await db.execute(
+            "INSERT INTO chat_history (role, content) VALUES ('assistant', ?)",
+            (ai_content,)
+        )
+        await db.commit()
+        await close_db(db)
+
+        return ChatResponse(content=ai_content)
     except Exception as e:
         print(f"Chat Error: {e}")
         raise HTTPException(status_code=500, detail="I encountered an error while processing your request.")
+
+@router.get("/chat/history")
+async def get_chat_history():
+    """Fetch the continuous chat history."""
+    db = await get_db()
+    try:
+        cursor = await db.execute("SELECT * FROM chat_history ORDER BY timestamp ASC")
+        rows = await cursor.fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        await close_db(db)
+
+@router.delete("/chat/history")
+async def clear_chat_history():
+    """Wipe all chat messages."""
+    db = await get_db()
+    try:
+        await db.execute("DELETE FROM chat_history")
+        await db.commit()
+        return {"ok": True}
+    finally:
+        await close_db(db)
