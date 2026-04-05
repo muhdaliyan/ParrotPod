@@ -1,0 +1,28 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "aiosqlite",
+    "aiofiles",
+    "python-dotenv",
+    "python-multipart",
+    "httpx",
+    "pydantic",
+    "pandas",
+    "PyPDF2",
+    "livekit-agents",
+    "livekit-plugins-deepgram",
+    "livekit-plugins-openai",
+    "livekit-plugins-silero",
+    "livekit-plugins-google",
+    "livekit-api",
+    "openai",
+    "deepgram-sdk",
+    "gunicorn"
+]

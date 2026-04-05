@@ -27,6 +27,7 @@ from livekit.agents import llm as lk_llm
 from livekit.agents import function_tool, RunContext
 from livekit.plugins import silero, deepgram
 from livekit.plugins import openai as lk_openai
+from livekit.plugins import google
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -413,12 +414,14 @@ async def entrypoint(ctx: agents.JobContext):
 
     voice_model = agent_config.get("voice", "aura-2-odysseus-en")
     llm_model = agent_config.get("llm_model", "gpt-4o-mini")
+
     lang = agent_config.get("language", "en")
     lang_map = {"en": "en-US", "ur": "ur", "ar": "ar", "es": "es", "fr": "fr"}
     dg_language = lang_map.get(lang, "en-US")
 
-    # FIX #6: Kick off LLM warmup in background — runs while session initializes
-    asyncio.create_task(warmup_llm(llm_model))
+    # Warmup ONLY for OpenAI models
+    if "gemini-" not in llm_model:
+        asyncio.create_task(warmup_llm(llm_model))
 
     # ── Session: optimized for low-latency voice from Pakistan → India West ──
     # Key changes vs original:
@@ -445,10 +448,17 @@ async def entrypoint(ctx: agents.JobContext):
             interim_results=True,       # stream partials → earlier preemptive gen
             punctuate=True,
         ),
-        llm=lk_openai.LLM(
-            model=llm_model,
-            tool_choice="auto",
-            temperature=0.7,
+        llm=(
+            google.LLM(
+                model=llm_model,
+                max_output_tokens=80,
+            )
+            if "gemini-" in llm_model
+            else lk_openai.LLM(
+                model=llm_model,
+                tool_choice="auto",
+                temperature=0.7,
+            )
         ),
         tts=deepgram.TTS(
             model=voice_model,

@@ -70,7 +70,7 @@ export default function Workflows() {
   });
 
   const [createForm, setCreateForm] = useState({
-    name: '', description: '', instructions: 'You are a helpful AI voice assistant.', welcome_message: 'Hello! How can I help you today?', voice: 'aura-2-luna-en', llm_model: 'gpt-4o-mini', language: 'en',
+    name: '', description: '', instructions: 'You are a helpful AI voice assistant.', welcome_message: 'Hello! How can I help you today?', voice: 'aura-2-luna-en', llm_model: 'gemini-2.5-flash', language: 'en',
     telegram_enabled: true, webhook_enabled: false, webhook_url: '',
   });
 
@@ -153,7 +153,7 @@ export default function Workflows() {
       setShowCreateModal(false);
       // Reset form
       setCreateForm({
-        name: '', description: '', instructions: 'You are a helpful AI voice assistant.', welcome_message: 'Hello! How can I help you today?', voice: 'aura-2-luna-en', llm_model: 'gpt-4o-mini', language: 'en',
+        name: '', description: '', instructions: 'You are a helpful AI voice assistant.', welcome_message: 'Hello! How can I help you today?', voice: 'aura-2-luna-en', llm_model: 'gemini-2.5-flash', language: 'en',
         telegram_enabled: true, webhook_enabled: false, webhook_url: '',
       });
     } catch (err) {
@@ -310,7 +310,18 @@ export default function Workflows() {
               <Settings size={14} className="text-white opacity-60" />
             </div>
             <div className="p-5">
-              <h3 className="font-bold text-primary text-lg mb-2">{activeAgent?.llm_model || 'gpt-4o-mini'}</h3>
+              <div className="flex items-center gap-2 mb-2">
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                  (activeAgent?.llm_model || '').includes('gemini') 
+                    ? 'bg-blue-100 text-blue-700' 
+                    : 'bg-green-100 text-green-700'
+                }`}>
+                  {(activeAgent?.llm_model || '').includes('gemini') ? 'Google Gemini' : 'OpenAI'}
+                </span>
+              </div>
+              <h3 className="font-bold text-primary text-lg mb-2 truncate" title={activeAgent?.llm_model || 'gpt-4o-mini'}>
+                {activeAgent?.llm_model || 'gpt-4o-mini'}
+              </h3>
               <div className="space-y-2 text-xs">
                 <div className="flex items-center justify-between py-1 border-b border-surface-container">
                   <span className="text-on-surface-variant">Instructions</span>
@@ -494,6 +505,8 @@ export default function Workflows() {
                         onChange={e => setForm(f => ({ ...f, llm_model: e.target.value }))}
                         className="w-full bg-surface-container-low border-none rounded-xl px-4 py-3 text-primary outline-none"
                       >
+                        <option value="gemini-2.5-flash">Gemini 2.5 Flash (Fastest)</option>
+                        <option value="gemini-2.0-pro-exp-02-05">Gemini 2.0 Pro Experimental</option>
                         <option value="gpt-4o-mini">GPT-4o Mini (fast, cheap)</option>
                         <option value="gpt-4o">GPT-4o (powerful)</option>
                         <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
