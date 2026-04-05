@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, ExternalLink, ChevronRight, Book, Server, Cpu, Globe, Rocket, Terminal, Layers, Sun, Moon, Key } from 'lucide-react';
+import { Search, ExternalLink, ChevronRight, Book, Server, Cpu, Globe, Rocket, Terminal, Layers, Sun, Moon, Key, Phone, Zap } from 'lucide-react';
 
 interface DocsLayoutProps {
   children: React.ReactNode;
@@ -20,8 +20,10 @@ export default function DocsLayout({ children, activeSection, setActiveSection, 
     { id: 'about', label: 'About', icon: Globe },
     { id: 'tools', label: 'Tools Support', icon: Cpu },
     { id: 'keys', label: 'Get Your Keys', icon: Key },
+    { id: 'telephony', label: 'Telephony (Voice)', icon: Phone },
     { id: 'setup', label: 'Local Setup', icon: Terminal },
     { id: 'deployment', label: 'Deployment', icon: Rocket },
+
   ];
 
   const searchIndex = [
@@ -31,7 +33,8 @@ export default function DocsLayout({ children, activeSection, setActiveSection, 
     { id: 'keys', title: 'Get Your API Keys', category: 'Direct Link', icon: Key, keywords: ['secrets', 'credentials', 'access'] },
     { id: 'setup', title: 'Local Setup', category: 'Direct Link', icon: Terminal, keywords: ['installation', 'running', 'development'] },
     { id: 'deployment', title: 'Deployment (Cloud)', category: 'Direct Link', icon: Rocket, keywords: ['production', 'hosting', 'render'] },
-    
+    { id: 'telephony', title: 'Telephony & Voice', category: 'Direct Link', icon: Phone, keywords: ['phone', 'numbers', 'call', 'webrtc'] },
+
     // Detailed search sub-items
     { id: 'keys', title: 'OpenAI API Setup', category: 'API Keys', icon: Key, keywords: ['openai', 'gpt', 'billing', 'secret'] },
     { id: 'keys', title: 'Gemini (Google) API', category: 'API Keys', icon: Key, keywords: ['google', 'aistudio', 'gemini', 'flash'] },
@@ -41,15 +44,18 @@ export default function DocsLayout({ children, activeSection, setActiveSection, 
     { id: 'setup', title: 'Database (SQLite) Setup', category: 'Backend', icon: Server, keywords: ['sqlite', 'database', 'db', 'storage'] },
     { id: 'deployment', title: 'Docker Configuration', category: 'Cloud', icon: Layers, keywords: ['docker', 'container', 'image', 'build'] },
     { id: 'deployment', title: 'Render Hosting Guide', category: 'Cloud', icon: Globe, keywords: ['render', 'hosting', 'provider'] },
+    { id: 'telephony', title: 'Buying Phone Numbers', category: 'Communication', icon: Phone, keywords: ['buy', 'number', 'livekit', 'free'] },
+    { id: 'telephony', title: 'ParrotPod Inventory', category: 'Dashbord', icon: Layers, keywords: ['inventory', 'numbers', 'my', 'assign'] },
+    { id: 'telephony', title: 'Automatic Dispatch Rules', category: 'Backend', icon: Zap, keywords: ['dispatch', 'rules', 'routing', 'auto'] },
     { id: 'tools', title: 'Speech-to-Text Support', category: 'Integrations', icon: Search, keywords: ['stt', 'recognition', 'audio'] },
   ];
 
   const filteredResults = searchQuery.trim() === ''
     ? []
     : searchIndex.filter(item =>
-        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.keywords.some(k => k.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
+      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.keywords.some(k => k.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -142,7 +148,7 @@ export default function DocsLayout({ children, activeSection, setActiveSection, 
                 </div>
               </div>
             )}
-            
+
             {showResults && searchQuery.trim() !== '' && filteredResults.length === 0 && (
               <div className={`absolute top-full left-8 mt-2 w-64 ${isDark ? 'bg-[#18181B] border-[#27272A]' : 'bg-white border-[#E4E4E7]'} border rounded-xl shadow-2xl p-4 text-center z-[60] animate-in fade-in slide-in-from-top-2 duration-200`}>
                 <p className={`text-xs ${isDark ? 'text-[#71717A]' : 'text-[#A1A1AA]'}`}>No results for "<span className="text-primary font-medium">{searchQuery}</span>"</p>
