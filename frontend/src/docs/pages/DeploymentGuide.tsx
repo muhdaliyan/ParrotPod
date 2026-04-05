@@ -32,17 +32,17 @@ const DeploymentGuide = ({ theme }: DeploymentGuideProps) => {
                         {
                             title: "Repository Setup",
                             desc: "Connect your repository to Render. Since ParrotPod is a mono-repo, Render will handle everything through our Docker configuration.",
-                            details: "Ensure your repository is **Public** for the easiest setup, or grant Render access to your private repo."
+                            details: <>Ensure your repository is <strong>Public</strong> for the easiest setup, or grant Render access to your private repo.</>
                         },
                         {
                             title: "Service Creation",
-                            desc: "Create a new **Web Service** on Render.",
-                            details: "Paste your GitHub repository URL. Render will automatically detect the **Dockerfile** in the root directory."
+                            desc: <>Create a new <strong>Web Service</strong> on Render.</>,
+                            details: <>Paste your GitHub repository URL. Render will automatically detect the <strong>Dockerfile</strong> in the root directory.</>
                         },
                         {
                             title: "Region & Runtime",
                             desc: "Select your preferred region (e.g., Oregon, Frankfurt) for lowest latency.",
-                            details: "The runtime will be automatically set to **Docker**. No manual environment selection is needed."
+                            details: <>The runtime will be automatically set to <strong>Docker</strong>. No manual environment selection is needed.</>
                         },
                         {
                             title: "Environment Variables",
@@ -77,7 +77,7 @@ const DeploymentGuide = ({ theme }: DeploymentGuideProps) => {
                 <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-[#18181B]'} mb-4`}>SPA Routing (Important)</h2>
                 <div className={`p-6 rounded-2xl ${isDark ? 'bg-primary/5 border-primary/10' : 'bg-primary/5 border-primary/20'} border`}>
                     <p className={`${isDark ? 'text-[#A1A1AA]' : 'text-[#52525B]'} text-sm leading-relaxed mb-4`}>
-                        ParrotPod uses **Path-Based Routing** (History API). To ensure that direct links like 
+                        ParrotPod uses <strong>Path-Based Routing</strong> (History API). To ensure that direct links like 
                         <code className="px-1.5 py-0.5 bg-primary/10 rounded font-mono text-primary mx-1">/docs/setup</code> 
                         work correctly upon page refresh, you must configure your hosting provider to redirect all 
                         non-file requests to <code className="px-1.5 py-0.5 bg-primary/10 rounded font-mono text-primary mx-1">index.html</code>.
@@ -99,7 +99,7 @@ const DeploymentGuide = ({ theme }: DeploymentGuideProps) => {
                     Finalize Deployment
                 </h3>
                 <p className={`${isDark ? 'text-[#A1A1AA]' : 'text-[#52525B]'} text-sm leading-relaxed`}>
-                    Click **Deploy Web Service**. Render will build the Docker image and deploy your instance. 
+                    Click <strong>Deploy Web Service</strong>. Render will build the Docker image and deploy your instance. 
                     Once complete, your ParrotPod dashboard will be live at the provided Render URL.
                 </p>
             </section>
