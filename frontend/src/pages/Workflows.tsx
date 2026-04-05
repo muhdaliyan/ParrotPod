@@ -296,7 +296,7 @@ export default function Workflows() {
             </div>
             <div className="p-4">
               <h3 className="font-bold text-primary text-sm mb-1">STT Engine</h3>
-              <p className="text-xs text-on-surface-variant">Deepgram Nova-2</p>
+              <p className="text-xs text-on-surface-variant">Deepgram Nova-3</p>
             </div>
           </motion.div>
 
@@ -311,11 +311,10 @@ export default function Workflows() {
             </div>
             <div className="p-5">
               <div className="flex items-center gap-2 mb-2">
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                  (activeAgent?.llm_model || '').includes('gemini') 
-                    ? 'bg-blue-100 text-blue-700' 
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${(activeAgent?.llm_model || '').includes('gemini')
+                    ? 'bg-blue-100 text-blue-700'
                     : 'bg-green-100 text-green-700'
-                }`}>
+                  }`}>
                   {(activeAgent?.llm_model || '').includes('gemini') ? 'Google Gemini' : 'OpenAI'}
                 </span>
               </div>
@@ -436,7 +435,7 @@ export default function Workflows() {
                         <label className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Assigned Phone Number</label>
                         <p className="text-xs text-on-surface-variant mt-1">This number routes directly to this agent.</p>
                       </div>
-                      
+
                       {activeAgent.phone_number ? (
                         <div className="bg-secondary-container/20 p-4 rounded-2xl border border-secondary/10 flex items-center justify-between">
                           <div className="flex items-center gap-3">
@@ -448,7 +447,7 @@ export default function Workflows() {
                               <p className="text-[10px] text-on-surface-variant uppercase tracking-wider">SIP Active</p>
                             </div>
                           </div>
-                          <button 
+                          <button
                             onClick={handleUnassignNumber}
                             className="bg-white/50 hover:bg-error-container hover:text-error px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
                           >
@@ -728,10 +727,10 @@ export default function Workflows() {
                 {/* Info panels for STT/Tools/Config */}
                 {selectedNode === 'STT' && (
                   <div className="text-sm text-on-surface-variant space-y-2">
-                    <p className="font-bold text-primary">Deepgram Nova-2 STT</p>
+                    <p className="font-bold text-primary">Deepgram Nova-3 STT</p>
                     <p>Converts user speech to text in real-time. Configured with end-of-turn detection and noise cancellation.</p>
                     <div className="bg-surface-container-low rounded-xl p-4 space-y-1 text-xs">
-                      <div className="flex justify-between"><span>Model</span><span className="font-bold">nova-2-general</span></div>
+                      <div className="flex justify-between"><span>Model</span><span className="font-bold">Nova-3-general</span></div>
                       <div className="flex justify-between"><span>Turn Detection</span><span className="font-bold">STT-based</span></div>
                       <div className="flex justify-between"><span>EOT Timeout</span><span className="font-bold">1000ms</span></div>
                     </div>

@@ -18,3 +18,5 @@ openai
 deepgram-sdk
 gunicorn
 uvicorn[standard]
+passlib[bcrypt]
+bcrypt

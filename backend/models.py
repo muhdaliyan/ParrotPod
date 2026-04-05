@@ -123,3 +123,16 @@ class DashboardStats(BaseModel):
     recent_sessions: List[dict]
     sessions_chart: List[dict]
 
+
+# ─── Config Models ─────────────────────────────────────────────────────────────
+
+class PasswordVerifyRequest(BaseModel):
+    password: str
+
+class PasswordChangeRequest(BaseModel):
+    current_password: Optional[str] = None
+    new_password: str
+
+class ConfigStatus(BaseModel):
+    password_required: bool
+

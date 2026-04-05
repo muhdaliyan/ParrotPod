@@ -84,6 +84,14 @@ async def init_db():
             )
         """)
 
+        # Config table for global settings
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS config (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            )
+        """)
+
         await db.commit()
         print("[DB] Tables initialized.")
 

@@ -7,7 +7,7 @@ import os
 load_dotenv()
 
 from database import init_db
-from routers import agents, files, sessions, notifications, dashboard, telephony
+from routers import agents, files, sessions, notifications, dashboard, telephony, voices, config
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
@@ -43,6 +43,8 @@ app.include_router(sessions.router)
 app.include_router(notifications.router)
 app.include_router(dashboard.router)
 app.include_router(telephony.router)
+app.include_router(voices.router)
+app.include_router(config.router)
 
 
 @app.get("/health")

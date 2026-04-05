@@ -8,6 +8,7 @@ import Integrations from './pages/Integrations';
 import Marketplace from './pages/Marketplace';
 import Inventory from './pages/Inventory';
 import Agent from './pages/Agent';
+import PasswordShield from './components/PasswordShield';
 
 export default function App() {
   // Try to get the initial tab from the URL hash, otherwise fallback to localStorage, then default to 'dashboard'
@@ -73,12 +74,14 @@ export default function App() {
   const showSidebar = true;
 
   return (
-    <div className="min-h-screen bg-background text-on-surface font-sans">
-      <Navbar currentTab={currentTab} setCurrentTab={setCurrentTab} />
-      {showSidebar && <Sidebar currentTab={currentTab} setCurrentTab={setCurrentTab} />}
-      <main className={`transition-all duration-300 ${showSidebar ? 'pl-64' : 'pl-0'}`}>
-        {renderContent()}
-      </main>
-    </div>
+    <PasswordShield>
+      <div className="min-h-screen bg-background text-on-surface font-sans">
+        <Navbar currentTab={currentTab} setCurrentTab={setCurrentTab} />
+        {showSidebar && <Sidebar currentTab={currentTab} setCurrentTab={setCurrentTab} />}
+        <main className={`transition-all duration-300 ${showSidebar ? 'pl-64' : 'pl-0'}`}>
+          {renderContent()}
+        </main>
+      </div>
+    </PasswordShield>
   );
 }
