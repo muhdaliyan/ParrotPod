@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2, Sparkles, PlusCircle, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
-import { GoogleGenAI } from "@google/genai";
+import { apiPost } from '../hooks/useApi';
 
 interface Message {
   id: string;
@@ -41,32 +41,31 @@ export default function Agent() {
     setIsLoading(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-      const model = "gemini-3-flash-preview";
+      // Map history for backend (optional but better)
+      const history = messages.map(m => ({
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: m.content
+      }));
 
-      const chat = ai.chats.create({
-        model: model,
-        config: {
-          systemInstruction: "You are Parrot Pod AI, a helpful and professional business automation assistant. You help users manage their workflows, inventory, and integrations. Keep your responses concise, professional, and actionable. Use markdown for formatting.",
-        },
+      const res = await apiPost<{ content: string }>('/api/agents/chat', { 
+        message: userMessage.content,
+        history: history
       });
-
-      const response = await chat.sendMessage({ message: userMessage.content });
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: response.text || "I'm sorry, I couldn't process that request.",
+        content: res.content || "I'm sorry, I couldn't process that request.",
         timestamp: new Date(),
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error("Gemini Error:", error);
+    } catch (error: any) {
+      console.error("Chat Error:", error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: "I encountered an error while processing your request. Please check your API key or try again later.",
+        content: error.message || "I encountered an error while processing your request. Please try again later.",
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);

@@ -87,17 +87,48 @@
 }
 
 /* ================= TYPOGRAPHY ================= */
+.markdown-content {
+  @apply text-sm leading-relaxed;
+}
+
 .markdown-content strong {
-  font-weight: 700;
+  @apply font-bold text-primary;
 }
 
 .markdown-content p {
-  margin-bottom: 1rem;
+  @apply mb-3 last:mb-0;
+}
+
+.markdown-content ul, .markdown-content ol {
+  @apply mb-3 pl-5 space-y-1;
 }
 
 .markdown-content ul {
   list-style-type: disc;
-  padding-left: 1.25rem;
+}
+
+.markdown-content ol {
+  list-style-type: decimal;
+}
+
+.markdown-content code {
+  @apply bg-surface-container-highest px-1.5 py-0.5 rounded-md font-mono text-[0.85em] text-primary;
+}
+
+.markdown-content pre {
+  @apply bg-surface-container-highest p-3 rounded-xl font-mono text-xs overflow-x-auto my-3 border border-outline-variant/10;
+}
+
+.markdown-content pre code {
+  @apply bg-transparent p-0;
+}
+
+.markdown-content h1, .markdown-content h2, .markdown-content h3 {
+  @apply font-bold text-primary mt-4 mb-2 first:mt-0;
+}
+
+.markdown-content blockquote {
+  @apply border-l-4 border-primary/20 pl-4 italic text-on-surface-variant my-3;
 }
 
 /* ================= COMPONENTS ================= */

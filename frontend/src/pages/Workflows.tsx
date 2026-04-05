@@ -56,7 +56,28 @@ export default function Workflows() {
   // Load agents
   const { data: agents, loading: agentsLoading, refetch: refetchAgents } = useApi<Agent[]>('/api/agents');
   const [activeAgentIndex, setActiveAgentIndex] = useState(0);
+
+  // Persistence: Restore last active agent from localStorage
+  useEffect(() => {
+    if (!agentsLoading && agents && agents.length > 0) {
+      const savedId = localStorage.getItem('last_active_agent_id');
+      if (savedId) {
+        const idx = agents.findIndex(a => a.id === parseInt(savedId, 10));
+        if (idx !== -1) {
+          setActiveAgentIndex(idx);
+        }
+      }
+    }
+  }, [agentsLoading, agents]);
+
   const activeAgent: Agent | null = agents && agents.length > 0 ? agents[Math.min(activeAgentIndex, agents.length - 1)] : null;
+
+  // Persistence: Save current agent to localStorage
+  useEffect(() => {
+    if (activeAgent) {
+      localStorage.setItem('last_active_agent_id', activeAgent.id.toString());
+    }
+  }, [activeAgent?.id]);
 
   const { data: files, loading: filesLoading, refetch: refetchFiles } = useApi<KnowledgeFile[]>(
     activeAgent ? `/api/agents/${activeAgent.id}/files` : '',

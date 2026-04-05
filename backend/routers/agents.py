@@ -2,7 +2,18 @@ from fastapi import APIRouter, HTTPException, Depends
 from database import get_db, close_db
 from models import AgentCreate, AgentUpdate, AgentOut
 import aiosqlite
+import os
 from datetime import datetime
+from pydantic import BaseModel
+from openai import OpenAI
+from typing import List, Optional
+
+class ChatRequest(BaseModel):
+    message: str
+    history: Optional[List[dict]] = []
+
+class ChatResponse(BaseModel):
+    content: str
 
 router = APIRouter(prefix="/api/agents", tags=["agents"])
 
@@ -94,3 +105,48 @@ async def delete_agent(agent_id: int):
         await db.commit()
     finally:
         await close_db(db)
+
+@router.post("/chat", response_model=ChatResponse)
+async def chat_with_ai(payload: ChatRequest):
+    """Centralized chat endpoint for the assistant UI."""
+    google_key = os.getenv("GOOGLE_API_KEY")
+    openai_key = os.getenv("OPENAI_API_KEY")
+    
+    # Priority: Google Gemini -> OpenAI
+    if google_key:
+        client = OpenAI(
+            api_key=google_key,
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+        )
+        model = "gemini-2.5-flash"
+    elif openai_key:
+        client = OpenAI(api_key=openai_key)
+        model = "gpt-4o-mini"
+    else:
+        raise HTTPException(status_code=500, detail="No LLM API keys configured in backend")
+
+    try:
+        system_msg = {
+            "role": "system", 
+            "content": """You are Parrot Pod AI, a high-end business automation assistant. 
+            Deliver information using structured markdown with clear headings, bullet points, and code blocks where appropriate. 
+            Prioritize readability, logical formatting, and a premium professional tone. 
+            Ensure your output is beautiful when rendered in a chat UI."""
+        }
+        
+        # Build prompt from provided history or just use current message
+        messages = [system_msg]
+        if payload.history:
+            messages.extend(payload.history[-10:]) # last 10 messages for context
+        messages.append({"role": "user", "content": payload.message})
+        
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            max_tokens=800,
+            temperature=0.7
+        )
+        return ChatResponse(content=response.choices[0].message.content)
+    except Exception as e:
+        print(f"Chat Error: {e}")
+        raise HTTPException(status_code=500, detail="I encountered an error while processing your request.")

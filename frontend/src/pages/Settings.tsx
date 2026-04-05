@@ -66,7 +66,7 @@ export default function Settings() {
   const { data: voices, loading: loadingVoices } = useApi<Voice[]>('/api/voices');
   const { data: configStatus, refetch: refetchConfig } = useApi<ConfigStatus>('/api/config/status');
   
-  const [activeTab, setActiveTab] = useState<'agent' | 'credentials'>('agent');
+  const [activeTab, setActiveTab] = useState<'agent' | 'credentials'>('credentials');
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [editData, setEditData] = useState<Partial<Agent>>({});
   const [isSaving, setIsSaving] = useState<number | null>(null);
