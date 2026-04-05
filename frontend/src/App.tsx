@@ -8,14 +8,15 @@ import Integrations from './pages/Integrations';
 import Marketplace from './pages/Marketplace';
 import Inventory from './pages/Inventory';
 import Agent from './pages/Agent';
+import Docs from './pages/Docs';
 import PasswordShield from './components/PasswordShield';
 
 export default function App() {
   // Try to get the initial tab from the URL hash, otherwise fallback to localStorage, then default to 'dashboard'
   const getInitialTab = () => {
-    const hash = window.location.hash.replace('#', '');
-    const validTabs = ['dashboard', 'workflows', 'settings', 'integrations', 'marketplace', 'inventory', 'agent'];
+    const validTabs = ['dashboard', 'workflows', 'settings', 'integrations', 'marketplace', 'inventory', 'agent', 'docs'];
     
+    const hash = window.location.hash.replace('#', '');
     if (validTabs.includes(hash)) {
       return hash;
     }
@@ -40,7 +41,7 @@ export default function App() {
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '');
-      const validTabs = ['dashboard', 'workflows', 'settings', 'integrations', 'marketplace', 'inventory', 'agent'];
+      const validTabs = ['dashboard', 'workflows', 'settings', 'integrations', 'marketplace', 'inventory', 'agent', 'docs'];
       if (validTabs.includes(hash)) {
         setCurrentTab(hash);
       }
@@ -66,6 +67,8 @@ export default function App() {
         return <Inventory />;
       case 'agent':
         return <Agent />;
+      case 'docs':
+        return <Docs setCurrentTab={setCurrentTab} />;
       default:
         return <Dashboard />;
     }
@@ -73,15 +76,27 @@ export default function App() {
 
   const showSidebar = true;
 
+  const content = (
+    <div className={`min-h-screen ${currentTab === 'docs' ? 'bg-[#FAFAFA]' : 'bg-background'} text-on-surface font-sans`}>
+      {currentTab !== 'docs' && (
+        <>
+          <Navbar currentTab={currentTab} setCurrentTab={setCurrentTab} />
+          <Sidebar currentTab={currentTab} setCurrentTab={setCurrentTab} />
+        </>
+      )}
+      <main className={`transition-all duration-300 ${currentTab === 'docs' ? 'pl-0' : 'pl-64'}`}>
+        {renderContent()}
+      </main>
+    </div>
+  );
+
+  if (currentTab === 'docs') {
+    return content;
+  }
+
   return (
     <PasswordShield>
-      <div className="min-h-screen bg-background text-on-surface font-sans">
-        <Navbar currentTab={currentTab} setCurrentTab={setCurrentTab} />
-        {showSidebar && <Sidebar currentTab={currentTab} setCurrentTab={setCurrentTab} />}
-        <main className={`transition-all duration-300 ${showSidebar ? 'pl-64' : 'pl-0'}`}>
-          {renderContent()}
-        </main>
-      </div>
+      {content}
     </PasswordShield>
   );
 }

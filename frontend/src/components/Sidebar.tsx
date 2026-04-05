@@ -37,12 +37,15 @@ export default function Sidebar({ currentTab, setCurrentTab }: SidebarProps) {
 
       <div className="mt-auto px-4 space-y-4">
         <div className="flex items-center justify-around bg-surface-container-low/50 p-2 rounded-xl border border-outline-variant/10">
-          <button className="text-on-surface-variant hover:text-primary hover:bg-white p-2 rounded-lg transition-all">
-            <Bell size={20} />
+          <button
+            onClick={() => setCurrentTab('docs')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-all ${currentTab === 'docs' ? 'text-primary bg-white shadow-sm' : 'text-on-surface-variant hover:text-primary hover:bg-white'
+              }`}
+          >
+            <GitBranch size={20} />
+            <span className="text-xs font-bold font-headline">Docs</span>
           </button>
-          <button className="text-on-surface-variant hover:text-primary hover:bg-white p-2 rounded-lg transition-all">
-            <HelpCircle size={20} />
-          </button>
+          <div className="w-px h-6 bg-outline-variant/20 mx-1" />
           <button
             onClick={() => setCurrentTab('settings')}
             className={`p-2 rounded-lg transition-all ${currentTab === 'settings' ? 'text-primary bg-white shadow-sm' : 'text-on-surface-variant hover:text-primary hover:bg-white'
