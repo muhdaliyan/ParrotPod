@@ -7,6 +7,7 @@ import GetKeys from '../docs/pages/GetKeys';
 import SetupGuide from '../docs/pages/SetupGuide';
 import DeploymentGuide from '../docs/pages/DeploymentGuide';
 import Telephony from '../docs/pages/Telephony';
+import McpGuide from '../docs/pages/McpGuide';
 
 interface DocsProps {
   setCurrentTab: (tab: string) => void;
@@ -17,7 +18,7 @@ export default function Docs({ setCurrentTab }: DocsProps) {
   const getInitialSection = () => {
     const pathParts = window.location.pathname.split('/');
     const section = pathParts[2] || 'overview'; // Expecting /docs/{section}
-    const validSections = ['overview', 'about', 'tools', 'keys', 'setup', 'deployment', 'telephony'];
+    const validSections = ['overview', 'about', 'tools', 'keys', 'setup', 'deployment', 'mcp', 'telephony'];
     return validSections.includes(section) ? section : 'overview';
   };
 
@@ -41,7 +42,7 @@ export default function Docs({ setCurrentTab }: DocsProps) {
       const pathParts = window.location.pathname.split('/');
       if (pathParts[1] === 'docs') {
         const section = pathParts[2] || 'overview';
-        const validSections = ['overview', 'about', 'tools', 'keys', 'setup', 'deployment', 'telephony'];
+        const validSections = ['overview', 'about', 'tools', 'keys', 'setup', 'deployment', 'mcp', 'telephony'];
         if (validSections.includes(section)) {
           setActiveSection(section);
         }
@@ -71,6 +72,8 @@ export default function Docs({ setCurrentTab }: DocsProps) {
         return <SetupGuide theme={theme} />;
       case 'deployment':
         return <DeploymentGuide theme={theme} />;
+      case 'mcp':
+        return <McpGuide theme={theme} />;
       case 'telephony':
         return <Telephony theme={theme} />;
       default:

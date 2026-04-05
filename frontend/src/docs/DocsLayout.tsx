@@ -23,7 +23,7 @@ export default function DocsLayout({ children, activeSection, setActiveSection, 
     { id: 'telephony', label: 'Telephony (Voice)', icon: Phone },
     { id: 'setup', label: 'Local Setup', icon: Terminal },
     { id: 'deployment', label: 'Deployment', icon: Rocket },
-
+    { id: 'mcp', label: 'MCP Setup', icon: () => <img src="/mcp.svg" className="w-4 h-4 object-contain" alt="MCP" />, isNew: true },
   ];
 
   const searchIndex = [
@@ -33,6 +33,7 @@ export default function DocsLayout({ children, activeSection, setActiveSection, 
     { id: 'keys', title: 'Get Your API Keys', category: 'Direct Link', icon: Key, keywords: ['secrets', 'credentials', 'access'] },
     { id: 'setup', title: 'Local Setup', category: 'Direct Link', icon: Terminal, keywords: ['installation', 'running', 'development'] },
     { id: 'deployment', title: 'Deployment (Cloud)', category: 'Direct Link', icon: Rocket, keywords: ['production', 'hosting', 'render'] },
+    { id: 'mcp', title: 'MCP Searcher Setup', category: 'Direct Link', icon: Server, keywords: ['mcp', 'claude', 'antigravity', 'search', 'docs'] },
     { id: 'telephony', title: 'Telephony & Voice', category: 'Direct Link', icon: Phone, keywords: ['phone', 'numbers', 'call', 'webrtc'] },
 
     // Detailed search sub-items
@@ -191,6 +192,9 @@ export default function DocsLayout({ children, activeSection, setActiveSection, 
               >
                 <item.icon size={18} className={activeSection === item.id ? 'text-primary' : `${isDark ? 'text-[#52525B] group-hover:text-[#A1A1AA]' : 'text-[#A1A1AA] group-hover:text-[#71717A]'}`} />
                 {item.label}
+                {item.isNew && (
+                  <span className="ml-2 px-1.5 py-0.5 rounded-[4px] bg-primary/20 text-primary text-[8px] font-black uppercase tracking-tighter animate-pulse">New</span>
+                )}
                 {activeSection === item.id && (
                   <ChevronRight size={14} className="ml-auto text-primary" />
                 )}
