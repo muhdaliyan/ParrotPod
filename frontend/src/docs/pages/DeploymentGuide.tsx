@@ -1,3 +1,6 @@
+import React from 'react';
+import { Rocket } from 'lucide-react';
+
 interface DeploymentGuideProps {
     theme: 'light' | 'dark';
 }
