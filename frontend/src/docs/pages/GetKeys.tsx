@@ -41,6 +41,18 @@ const GetKeys = ({ theme }: GetKeysProps) => {
                 "Generate a new API key for your project."
             ],
             limitations: "Free tier usage is subject to rate limits and your data may be used to improve Google products (use cautiously with sensitive data)."
+        },
+        {
+            name: "OpenAI",
+            tag: "Paid / Credits",
+            description: "Power your agents with industry-standard models like GPT-4o. Requires a valid billing account.",
+            steps: [
+                "Sign up at [OpenAI Platform](https://platform.openai.com/)",
+                "Navigate to 'Organization' > 'Billing' to add credits.",
+                "Go to 'API Keys' section.",
+                "Create a new Secret Key."
+            ],
+            limitations: "Requires credit balance for API calls. Rate limits apply based on your tier."
         }
     ];
 

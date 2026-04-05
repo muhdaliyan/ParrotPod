@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, ExternalLink, ChevronRight, Book, Server, Cpu, Globe, Rocket, Terminal, Layers, Sun, Moon, Key } from 'lucide-react';
 
 interface DocsLayoutProps {
@@ -11,6 +11,10 @@ interface DocsLayoutProps {
 }
 
 export default function DocsLayout({ children, activeSection, setActiveSection, onGoToConsole, theme, setTheme }: DocsLayoutProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showResults, setShowResults] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+
   const sidebarItems = [
     { id: 'overview', label: 'Overview', icon: Book },
     { id: 'about', label: 'About', icon: Globe },
@@ -19,6 +23,62 @@ export default function DocsLayout({ children, activeSection, setActiveSection, 
     { id: 'setup', label: 'Local Setup', icon: Terminal },
     { id: 'deployment', label: 'Deployment', icon: Rocket },
   ];
+
+  const searchIndex = [
+    { id: 'overview', title: 'Overview', category: 'Direct Link', icon: Book, keywords: ['start', 'introduction', 'welcome', 'basics'] },
+    { id: 'about', title: 'About ParrotPod', category: 'Direct Link', icon: Globe, keywords: ['vision', 'mission', 'opensource', 'stack'] },
+    { id: 'tools', title: 'Tools Support', category: 'Direct Link', icon: Cpu, keywords: ['integrations', 'ecosystem', 'capabilities'] },
+    { id: 'keys', title: 'Get Your API Keys', category: 'Direct Link', icon: Key, keywords: ['secrets', 'credentials', 'access'] },
+    { id: 'setup', title: 'Local Setup', category: 'Direct Link', icon: Terminal, keywords: ['installation', 'running', 'development'] },
+    { id: 'deployment', title: 'Deployment (Cloud)', category: 'Direct Link', icon: Rocket, keywords: ['production', 'hosting', 'render'] },
+    
+    // Detailed search sub-items
+    { id: 'keys', title: 'OpenAI API Setup', category: 'API Keys', icon: Key, keywords: ['openai', 'gpt', 'billing', 'secret'] },
+    { id: 'keys', title: 'Gemini (Google) API', category: 'API Keys', icon: Key, keywords: ['google', 'aistudio', 'gemini', 'flash'] },
+    { id: 'keys', title: 'Deepgram (STT) API', category: 'API Keys', icon: Key, keywords: ['deepgram', 'transcription', 'voice'] },
+    { id: 'keys', title: 'LiveKit (RTC) Setup', category: 'API Keys', icon: Key, keywords: ['livekit', 'webrtc', 'cloud', 'ws'] },
+    { id: 'setup', title: 'Environment (.env) Config', category: 'Configuration', icon: Terminal, keywords: ['env', 'variables', 'dotenv', 'local'] },
+    { id: 'setup', title: 'Database (SQLite) Setup', category: 'Backend', icon: Server, keywords: ['sqlite', 'database', 'db', 'storage'] },
+    { id: 'deployment', title: 'Docker Configuration', category: 'Cloud', icon: Layers, keywords: ['docker', 'container', 'image', 'build'] },
+    { id: 'deployment', title: 'Render Hosting Guide', category: 'Cloud', icon: Globe, keywords: ['render', 'hosting', 'provider'] },
+    { id: 'tools', title: 'Speech-to-Text Support', category: 'Integrations', icon: Search, keywords: ['stt', 'recognition', 'audio'] },
+  ];
+
+  const filteredResults = searchQuery.trim() === ''
+    ? []
+    : searchIndex.filter(item =>
+        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.keywords.some(k => k.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowResults(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSearchSelect = (itemId: string) => {
+    setActiveSection(itemId);
+    setSearchQuery('');
+    setShowResults(false);
+  };
+
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT') {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const toggleTheme = () => {
     setTheme(theme === 'light' ? 'dark' : 'light');
@@ -40,15 +100,54 @@ export default function DocsLayout({ children, activeSection, setActiveSection, 
             </span>
           </div>
 
-          <div className={`hidden md:flex items-center ml-8 px-4 py-1.5 ${isDark ? 'bg-[#18181B] border-[#27272A]' : 'bg-[#F4F4F5] border-[#E4E4E7]'} border rounded-full gap-3 group focus-within:border-primary/50 transition-all duration-300`}>
-            <Search size={16} className={`${isDark ? 'text-[#52525B]' : 'text-[#A1A1AA]'} group-focus-within:text-primary transition-colors`} />
-            <input
-              type="text"
-              placeholder="Search docs..."
-              className={`bg-transparent border-none outline-none text-sm w-48 ${isDark ? 'text-[#A1A1AA] placeholder:text-[#52525B]' : 'text-[#18181B] placeholder:text-[#A1A1AA]'}`}
-              readOnly
-            />
-            <span className={`text-[10px] font-mono ${isDark ? 'bg-[#27272A] text-[#71717A]' : 'bg-[#E4E4E7] text-[#71717A]'} px-1.5 py-0.5 rounded group-focus-within:text-primary/70`}>/</span>
+          <div ref={searchRef} className="relative hidden md:block">
+            <div className={`flex items-center ml-8 px-4 py-1.5 ${isDark ? 'bg-[#18181B] border-[#27272A]' : 'bg-[#F4F4F5] border-[#E4E4E7]'} border rounded-full gap-3 group focus-within:border-primary/50 transition-all duration-300`}>
+              <Search size={16} className={`${isDark ? 'text-[#52525B]' : 'text-[#A1A1AA]'} group-focus-within:text-primary transition-colors`} />
+              <input
+                ref={inputRef}
+                type="text"
+                placeholder="Search docs..."
+                className={`bg-transparent border-none outline-none text-sm w-48 ${isDark ? 'text-[#A1A1AA] placeholder:text-[#52525B]' : 'text-[#18181B] placeholder:text-[#A1A1AA]'}`}
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowResults(true);
+                }}
+                onFocus={() => setShowResults(true)}
+              />
+              <span className={`text-[10px] font-mono ${isDark ? 'bg-[#27272A] text-[#71717A]' : 'bg-[#E4E4E7] text-[#71717A]'} px-1.5 py-0.5 rounded group-focus-within:text-primary/70`}>/</span>
+            </div>
+
+            {/* Search Results Dropdown */}
+            {showResults && filteredResults.length > 0 && (
+              <div className={`absolute top-full left-8 mt-2 w-64 ${isDark ? 'bg-[#18181B] border-[#27272A]' : 'bg-white border-[#E4E4E7]'} border rounded-xl shadow-2xl overflow-hidden z-[60] animate-in fade-in slide-in-from-top-2 duration-200`}>
+                <div className="py-2">
+                  <p className={`px-4 py-1 text-[10px] font-bold uppercase tracking-widest ${isDark ? 'text-[#52525B]' : 'text-[#A1A1AA]'} mb-1`}>Results</p>
+                  {filteredResults.map((result, idx) => (
+                    <button
+                      key={`${result.id}-${idx}`}
+                      onClick={() => handleSearchSelect(result.id)}
+                      className={`w-full flex items-center justify-between px-4 py-2.5 text-sm ${isDark ? 'hover:bg-[#27272A] text-[#E4E4E7]' : 'hover:bg-[#F4F4F5] text-[#18181B]'} transition-colors text-left`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <result.icon size={16} className="text-primary" />
+                        <div className="flex flex-col">
+                          <span className="font-medium">{result.title}</span>
+                          <span className={`text-[10px] ${isDark ? 'text-[#71717A]' : 'text-[#A1A1AA]'}`}>{result.category}</span>
+                        </div>
+                      </div>
+                      <ChevronRight size={12} className={isDark ? 'text-[#3F3F46]' : 'text-[#D4D4D8]'} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {showResults && searchQuery.trim() !== '' && filteredResults.length === 0 && (
+              <div className={`absolute top-full left-8 mt-2 w-64 ${isDark ? 'bg-[#18181B] border-[#27272A]' : 'bg-white border-[#E4E4E7]'} border rounded-xl shadow-2xl p-4 text-center z-[60] animate-in fade-in slide-in-from-top-2 duration-200`}>
+                <p className={`text-xs ${isDark ? 'text-[#71717A]' : 'text-[#A1A1AA]'}`}>No results for "<span className="text-primary font-medium">{searchQuery}</span>"</p>
+              </div>
+            )}
           </div>
         </div>
 
