@@ -136,6 +136,16 @@ export default function PasswordShield({ children }: PasswordShieldProps) {
                     </>
                   )}
                 </button>
+
+                <div className="pt-4">
+                  <button
+                    type="button"
+                    onClick={() => window.location.href = '/docs'}
+                    className="w-full py-2 text-xs font-black uppercase tracking-widest text-primary/40 hover:text-primary transition-colors"
+                  >
+                    Go to Documentation
+                  </button>
+                </div>
               </form>
             </motion.div>
           </div>

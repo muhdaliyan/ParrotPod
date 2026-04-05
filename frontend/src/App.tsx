@@ -12,18 +12,22 @@ import Docs from './pages/Docs';
 import PasswordShield from './components/PasswordShield';
 
 export default function App() {
-  // Try to get the initial tab from the URL hash, otherwise fallback to localStorage, then default to 'dashboard'
+  // Get the initial tab from the URL path, fallback to localStorage, then 'dashboard'
   const getInitialTab = () => {
+    const path = window.location.pathname.split('/')[1];
     const validTabs = ['dashboard', 'workflows', 'settings', 'integrations', 'marketplace', 'inventory', 'agent', 'docs'];
     
-    const hash = window.location.hash.replace('#', '');
-    if (validTabs.includes(hash)) {
-      return hash;
+    if (validTabs.includes(path)) {
+      return path;
     }
     
-    const savedTab = localStorage.getItem('currentTab');
-    if (savedTab && validTabs.includes(savedTab)) {
-      return savedTab;
+    // Default to 'dashboard' for root / or invalid paths
+    if (path === '' || path === undefined) {
+      const savedTab = localStorage.getItem('currentTab');
+      if (savedTab && validTabs.includes(savedTab)) {
+        return savedTab;
+      }
+      return 'dashboard';
     }
     
     return 'dashboard';
@@ -31,24 +35,34 @@ export default function App() {
 
   const [currentTab, setCurrentTab] = useState(getInitialTab());
 
-  // Update hash and localStorage whenever the tab changes
+  // Update path and localStorage whenever the tab changes
   useEffect(() => {
-    window.location.hash = currentTab;
+    const path = currentTab === 'dashboard' ? '/' : `/${currentTab}`;
+    // If we are navigating to docs, only push if we aren't already in the docs area
+    if (currentTab === 'docs') {
+      if (!window.location.pathname.startsWith('/docs')) {
+        window.history.pushState({ tab: 'docs' }, '', '/docs/overview');
+      }
+    } else {
+      if (window.location.pathname !== path) {
+        window.history.pushState({ tab: currentTab }, '', path);
+      }
+    }
     localStorage.setItem('currentTab', currentTab);
   }, [currentTab]);
 
-  // Listen for hash changes (e.g. browser back/forward)
+  // Listen for browser navigation (popstate)
   useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '');
+    const handlePopState = () => {
+      const path = window.location.pathname.split('/')[1] || 'dashboard';
       const validTabs = ['dashboard', 'workflows', 'settings', 'integrations', 'marketplace', 'inventory', 'agent', 'docs'];
-      if (validTabs.includes(hash)) {
-        setCurrentTab(hash);
+      if (validTabs.includes(path)) {
+        setCurrentTab(path);
       }
     };
 
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   const renderContent = () => {

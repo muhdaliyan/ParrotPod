@@ -70,6 +70,26 @@ const DeploymentGuide = ({ theme }: DeploymentGuideProps) => {
                 </div>
             </section>
 
+            <section className="space-y-6 mt-12">
+                <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-[#18181B]'} mb-4`}>SPA Routing (Important)</h2>
+                <div className={`p-6 rounded-2xl ${isDark ? 'bg-primary/5 border-primary/10' : 'bg-primary/5 border-primary/20'} border`}>
+                    <p className={`${isDark ? 'text-[#A1A1AA]' : 'text-[#52525B]'} text-sm leading-relaxed mb-4`}>
+                        ParrotPod uses **Path-Based Routing** (History API). To ensure that direct links like 
+                        <code className="px-1.5 py-0.5 bg-primary/10 rounded font-mono text-primary mx-1">/docs/setup</code> 
+                        work correctly upon page refresh, you must configure your hosting provider to redirect all 
+                        non-file requests to <code className="px-1.5 py-0.5 bg-primary/10 rounded font-mono text-primary mx-1">index.html</code>.
+                    </p>
+                    <div className={`p-4 rounded-xl ${isDark ? 'bg-[#09090B]' : 'bg-[#F4F4F5]'} border ${isDark ? 'border-[#27272A]' : 'border-[#E4E4E7]'}`}>
+                        <p className={`text-[11px] font-bold uppercase tracking-widest ${isDark ? 'text-[#71717A]' : 'text-[#A1A1AA]'} mb-2`}>Render Redirect Rules:</p>
+                        <p className={`text-xs ${isDark ? 'text-[#E4E4E7]' : 'text-[#18181B]'} font-mono`}>
+                            Source: <code className="text-primary">/*</code><br />
+                            Destination: <code className="text-primary">/index.html</code><br />
+                            Action: <code className="text-primary">Rewrite</code>
+                        </p>
+                    </div>
+                </div>
+            </section>
+
             <section className={`mt-16 p-8 rounded-3xl ${isDark ? 'bg-primary/5 border-primary/10' : 'bg-primary/5 border-primary/20'} border`}>
                 <h3 className={`font-bold mb-2 flex items-center gap-2 ${isDark ? 'text-white' : 'text-[#18181B]'}`}>
                     <Rocket size={18} className="text-primary" />

@@ -12,11 +12,12 @@ interface DocsProps {
 }
 
 export default function Docs({ setCurrentTab }: DocsProps) {
-  // Sync section with URL hash if possible, e.g. #docs/setup
+  // Sync section with URL path, e.g. /docs/setup
   const getInitialSection = () => {
-    const hash = window.location.hash.split('/')[1] || 'overview';
+    const pathParts = window.location.pathname.split('/');
+    const section = pathParts[2] || 'overview'; // Expecting /docs/{section}
     const validSections = ['overview', 'about', 'tools', 'keys', 'setup', 'deployment'];
-    return validSections.includes(hash) ? hash : 'overview';
+    return validSections.includes(section) ? section : 'overview';
   };
 
   const [activeSection, setActiveSection] = useState(getInitialSection());
@@ -25,10 +26,30 @@ export default function Docs({ setCurrentTab }: DocsProps) {
     return (savedTheme as 'light' | 'dark') || 'light';
   });
 
-  // Update hash when section changes
+  // Update path when section changes
   useEffect(() => {
-    window.location.hash = `docs/${activeSection}`;
+    const path = `/docs/${activeSection}`;
+    if (window.location.pathname !== path) {
+      window.history.pushState({ section: activeSection }, '', path);
+    }
   }, [activeSection]);
+
+  // Handle browser back/forward buttons specifically for docs sections
+  useEffect(() => {
+    const handlePopState = () => {
+      const pathParts = window.location.pathname.split('/');
+      if (pathParts[1] === 'docs') {
+        const section = pathParts[2] || 'overview';
+        const validSections = ['overview', 'about', 'tools', 'keys', 'setup', 'deployment'];
+        if (validSections.includes(section)) {
+          setActiveSection(section);
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Persist theme
   useEffect(() => {
