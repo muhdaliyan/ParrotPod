@@ -198,24 +198,32 @@ async def save_action(agent_id: int, session_room: str, summary: str, items: lis
 
 async def warmup_llm(model: str):
     """
-    Fire a tiny dummy request to pre-heat the OpenAI connection.
-    Eliminates the 7+ second cold start TTFT on the first real turn.
+    Fire a tiny dummy request to pre-heat the connection to the provider.
+    Eliminates the cold start TTFT on the first real turn.
     """
     try:
-        async with httpx.AsyncClient() as client:
-            await client.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={"Authorization": f"Bearer {os.getenv('OPENAI_API_KEY', '')}"},
-                json={
-                    "model": model,
-                    "max_tokens": 1,
-                    "messages": [{"role": "user", "content": "hi"}]
-                },
-                timeout=5,
-            )
-            logger.debug("[Warmup] LLM connection pre-heated")
-    except Exception:
-        pass  # Warmup failure is non-fatal
+        if "gemini-" in model:
+            # Gemini Warmup
+            api_key = os.getenv("GOOGLE_API_KEY", "")
+            if not api_key: return
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+            payload = {"contents": [{"parts": [{"text": "hi"}]}], "generationConfig": {"maxOutputTokens": 1}}
+            async with httpx.AsyncClient() as client:
+                await client.post(url, json=payload, timeout=5)
+        else:
+            # OpenAI Warmup
+            api_key = os.getenv("OPENAI_API_KEY", "")
+            if not api_key: return
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {api_key}"},
+                    json={"model": model, "max_tokens": 1, "messages": [{"role": "user", "content": "hi"}]},
+                    timeout=5,
+                )
+        logger.debug(f"[Warmup] LLM ({model}) pre-heated")
+    except Exception as e:
+        logger.debug(f"[Warmup] {model} failed: {e}")
 
 
 # ─── Prewarm ──────────────────────────────────────────────────────────────────
@@ -228,8 +236,8 @@ def prewarm(proc: JobProcess):
     """
     proc.userdata["vad"] = silero.VAD.load(
         min_speech_duration=0.05,
-        min_silence_duration=0.55,       # tighter than before — less dead air
-        prefix_padding_duration=0.3,     # was 0.5 — less pre-roll = less lag
+        min_silence_duration=0.35,       # REDUCED from 0.55s — faster turn-taking
+        prefix_padding_duration=0.1,     # REDUCED from 0.3s — less audio buffering lag
         activation_threshold=0.5,
         deactivation_threshold=0.35,
     )
@@ -434,8 +442,8 @@ async def entrypoint(ctx: agents.JobContext):
     #   Endpointing: min_delay 0.3→0.2 shaves another 100ms off every reply.
     vad_instance = ctx.proc.userdata.get("vad") or silero.VAD.load(
         min_speech_duration=0.05,
-        min_silence_duration=0.55,
-        prefix_padding_duration=0.3,
+        min_silence_duration=0.35,
+        prefix_padding_duration=0.1,
         activation_threshold=0.5,
         deactivation_threshold=0.35,
     )
@@ -468,7 +476,7 @@ async def entrypoint(ctx: agents.JobContext):
         vad=vad_instance,
         turn_handling=TurnHandlingOptions(
             interruption={"mode": "vad"},
-            endpointing={"mode": "dynamic", "min_delay": 0.2, "max_delay": 2.5},
+            endpointing={"mode": "dynamic", "min_delay": 0.15, "max_delay": 2.5}, # min_delay 0.2 -> 0.15
         ),
     )
 
@@ -479,6 +487,32 @@ async def entrypoint(ctx: agents.JobContext):
     @session.on("session_usage_updated")
     def _on_usage(ev):
         usage_collector.collect(ev.usage)
+
+    @session.on("metrics_collected")
+    def _on_metrics(metrics: MetricsCollectedEvent):
+        # Defensive check to avoid AttributeError if fields are missing in some versions/events
+        summary = []
+        
+        # STT Metrics
+        stt = getattr(metrics, 'stt', None)
+        if stt:
+            stt_latency = f"STT: {stt.audio_duration:.2f}s audio"
+            if hasattr(stt, 'finalized'):
+                 stt_latency += f" | {stt.finalized:.1f}ms tail"
+            summary.append(stt_latency)
+            
+        # LLM Metrics
+        llm = getattr(metrics, 'llm', None)
+        if llm:
+            summary.append(f"LLM TTFT: {llm.ttft * 1000:.0f}ms")
+            
+        # TTS Metrics
+        tts = getattr(metrics, 'tts', None)
+        if tts:
+            summary.append(f"TTS Start: {tts.ttft * 1000:.0f}ms")
+        
+        if summary:
+            logger.info(f"[Metrics] {' | '.join(summary)}")
 
     async def log_usage():
         summary = usage_collector.get_summary()

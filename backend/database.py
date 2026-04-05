@@ -94,6 +94,14 @@ async def init_db():
             )
         """)
 
+        # Config table for admin settings (password, etc.)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS config (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            )
+        """)
+
         await db.commit()
         print("[DB] Tables initialized.")
 
