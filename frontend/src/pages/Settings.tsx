@@ -59,10 +59,6 @@ const MODELS = [
 
 const LANGUAGES = [
   { id: 'en', name: 'English' },
-  { id: 'ur', name: 'Urdu' },
-  { id: 'ar', name: 'Arabic' },
-  { id: 'es', name: 'Spanish' },
-  { id: 'fr', name: 'French' },
 ];
 
 export default function Settings() {

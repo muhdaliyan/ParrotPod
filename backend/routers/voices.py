@@ -35,14 +35,15 @@ async def list_voices():
             
             for m in models:
                 if m.get("architecture") in ["aura", "aura-2"] or "aura" in m.get("name", "").lower():
-                    # Format standard Aura names
-                    name = m.get("name")
-                    tts_voices.append({
-                        "id": name,
-                        "name": name.replace("aura-", "").replace("aura-2-", "").title(),
-                        "language": m.get("language", "en"),
-                        "description": f"Deepgram {m.get('architecture', 'Aura').title()} Voice"
-                    })
+                    # Only include English voices
+                    lang = m.get("language", "en")
+                    if lang == "en":
+                        tts_voices.append({
+                            "id": name,
+                            "name": name.replace("aura-", "").replace("aura-2-", "").title(),
+                            "language": lang,
+                            "description": f"Deepgram {m.get('architecture', 'Aura').title()} Voice"
+                        })
             
             if not tts_voices:
                 return get_fallback_voices()

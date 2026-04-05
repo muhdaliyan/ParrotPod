@@ -416,7 +416,7 @@ async def entrypoint(ctx: agents.JobContext):
     llm_model = agent_config.get("llm_model", "gpt-4o-mini")
 
     lang = agent_config.get("language", "en")
-    lang_map = {"en": "en-US", "ur": "ur", "ar": "ar", "es": "es", "fr": "fr"}
+    lang_map = {"en": "en-US"}
     dg_language = lang_map.get(lang, "en-US")
 
     # Warmup ONLY for OpenAI models
