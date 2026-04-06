@@ -136,3 +136,12 @@ class PasswordChangeRequest(BaseModel):
 class ConfigStatus(BaseModel):
     password_required: bool
 
+class TelegramConfig(BaseModel):
+    bot_token: Optional[str] = None
+    chat_id: Optional[str] = None
+    is_integrated: bool = False
+
+class TelegramConfigUpdate(BaseModel):
+    bot_token: str
+    chat_id: str
+

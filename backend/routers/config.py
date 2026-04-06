@@ -1,8 +1,9 @@
 from fastapi import APIRouter, HTTPException, Depends
 from database import get_db, close_db
-from models import PasswordVerifyRequest, PasswordChangeRequest, ConfigStatus
+from models import PasswordVerifyRequest, PasswordChangeRequest, ConfigStatus, TelegramConfig, TelegramConfigUpdate
 import aiosqlite
 import bcrypt
+import httpx
 
 router = APIRouter(prefix="/api/config", tags=["config"])
 
@@ -81,3 +82,62 @@ async def update_password(payload: PasswordChangeRequest):
         return {"success": True}
     finally:
         await close_db(db)
+@router.get("/telegram", response_model=TelegramConfig)
+async def get_telegram_config():
+    db = await get_db()
+    try:
+        bot_token = await get_config("telegram_bot_token", db)
+        chat_id = await get_config("telegram_chat_id", db)
+        return {
+            "bot_token": bot_token,
+            "chat_id": chat_id,
+            "is_integrated": bool(bot_token and chat_id)
+        }
+    finally:
+        await close_db(db)
+
+@router.post("/telegram")
+async def update_telegram_config(payload: TelegramConfigUpdate):
+    db = await get_db()
+    try:
+        await set_config("telegram_bot_token", payload.bot_token, db)
+        await set_config("telegram_chat_id", payload.chat_id, db)
+        return {"success": True}
+    finally:
+        await close_db(db)
+
+@router.delete("/telegram")
+async def delete_telegram_config():
+    db = await get_db()
+    try:
+        await db.execute("DELETE FROM config WHERE key IN ('telegram_bot_token', 'telegram_chat_id')")
+        await db.commit()
+        return {"success": True}
+    finally:
+        await close_db(db)
+
+@router.post("/telegram/test")
+async def test_telegram_config(payload: TelegramConfigUpdate):
+    url = f"https://api.telegram.org/bot{payload.bot_token}/getMe"
+    try:
+        async with httpx.AsyncClient() as client:
+            # First test if bot exists
+            resp = await client.get(url, timeout=10)
+            if resp.status_code != 200:
+                return {"success": False, "message": "Invalid Bot Token"}
+            
+            # Then try sending a test message
+            send_url = f"https://api.telegram.org/bot{payload.bot_token}/sendMessage"
+            send_resp = await client.post(send_url, json={
+                "chat_id": payload.chat_id,
+                "text": "🦜 *Parrot Pod Test Message*\n\nYour Telegram integration is working perfectly!",
+                "parse_mode": "Markdown"
+            }, timeout=10)
+            
+            if send_resp.status_code == 200:
+                return {"success": True, "message": "Test message sent!"}
+            else:
+                err_data = send_resp.json()
+                return {"success": False, "message": f"Telegram Error: {err_data.get('description', 'Unknown error')}"}
+    except Exception as e:
+        return {"success": False, "message": f"Connection Error: {str(e)}"}

@@ -34,8 +34,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 DATABASE_PATH = os.getenv("DATABASE_PATH", "./parrotpod.db")
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL", "")
 # FIX #5: Use env var with sensible default instead of hardcoded path
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", "./uploads")
@@ -104,13 +102,32 @@ async def load_agent_files(agent_id: int) -> str:
     return "\n\n".join(context_parts)
 
 
+async def load_telegram_config() -> tuple:
+    """Load Telegram bot token and chat ID from database."""
+    try:
+        async with aiosqlite.connect(DATABASE_PATH) as db:
+            cursor = await db.execute("SELECT value FROM config WHERE key = 'telegram_bot_token'")
+            row = await cursor.fetchone()
+            bot_token = row[0] if row else ""
+
+            cursor = await db.execute("SELECT value FROM config WHERE key = 'telegram_chat_id'")
+            row = await cursor.fetchone()
+            chat_id = row[0] if row else ""
+
+            return bot_token, chat_id
+    except Exception as e:
+        logger.error(f"[DB] Failed to load telegram config: {e}")
+        return "", ""
+
+
 async def send_telegram(agent_config: dict, agent_name: str, summary: str, items: list) -> bool:
     """Send order/event summary to Telegram."""
     if not agent_config.get("telegram_enabled", 1):
         logger.info(f"[Telegram] Disabled for agent '{agent_name}'")
         return False
 
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+    bot_token, chat_id = await load_telegram_config()
+    if not bot_token or not chat_id:
         return False
 
     items_text = ""
@@ -124,11 +141,11 @@ async def send_telegram(agent_config: dict, agent_name: str, summary: str, items
         message += f"\n\n🛒 *Items:*\n{items_text}"
     message += "\n\n_Sent by Parrot Pod Voice Agent_"
 
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.post(url, json={
-                "chat_id": TELEGRAM_CHAT_ID,
+                "chat_id": chat_id,
                 "text": message,
                 "parse_mode": "Markdown",
             }, timeout=10)
