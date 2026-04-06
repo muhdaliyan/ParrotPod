@@ -75,14 +75,20 @@ FRONTEND_URL=http://localhost:3000`}
                 <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-[#18181B]'} mb-4`}>Automated Setup</h2>
                 <div className="space-y-4">
                     <div className={`p-5 rounded-xl ${isDark ? 'bg-[#18181B] border-[#27272A]' : 'bg-white border-[#E4E4E7] shadow-sm'} border`}>
-                        <p className={`font-bold text-xs mb-3 ${isDark ? 'text-white' : 'text-[#18181B]'}`}>1. Run Unified Setup</p>
+                        <p className={`font-bold text-xs mb-3 ${isDark ? 'text-white' : 'text-[#18181B]'}`}>1. Clone the Repository</p>
+                        <div className={`p-3 rounded-lg ${isDark ? 'bg-[#09090B]' : 'bg-[#F4F4F5]'} border ${isDark ? 'border-[#3F3F46]' : 'border-[#E4E4E7]'}`}>
+                            <code className="text-primary text-xs font-mono">git clone https://github.com/muhdaliyan/ParrotPod && cd ParrotPod</code>
+                        </div>
+                    </div>
+                    <div className={`p-5 rounded-xl ${isDark ? 'bg-[#18181B] border-[#27272A]' : 'bg-white border-[#E4E4E7] shadow-sm'} border`}>
+                        <p className={`font-bold text-xs mb-3 ${isDark ? 'text-white' : 'text-[#18181B]'}`}>2. Run Unified Setup</p>
                         <div className={`p-3 rounded-lg ${isDark ? 'bg-[#09090B]' : 'bg-[#F4F4F5]'} border ${isDark ? 'border-[#3F3F46]' : 'border-[#E4E4E7]'}`}>
                             <code className="text-primary text-xs font-mono">npm run setup:all</code>
                         </div>
                         <p className={`mt-2 text-[10px] ${isDark ? 'text-[#71717A]' : 'text-[#A1A1AA]'}`}>This command installs all dependencies for both frontend and backend modules.</p>
                     </div>
                     <div className={`p-5 rounded-xl ${isDark ? 'bg-[#18181B] border-[#27272A]' : 'bg-white border-[#E4E4E7] shadow-sm'} border`}>
-                        <p className={`font-bold text-xs mb-3 ${isDark ? 'text-white' : 'text-[#18181B]'}`}>2. Launch Development Servers</p>
+                        <p className={`font-bold text-xs mb-3 ${isDark ? 'text-white' : 'text-[#18181B]'}`}>3. Launch Development Servers</p>
                         <div className={`p-3 rounded-lg ${isDark ? 'bg-[#09090B]' : 'bg-[#F4F4F5]'} border ${isDark ? 'border-[#3F3F46]' : 'border-[#E4E4E7]'}`}>
                             <code className="text-primary text-xs font-mono">npm run dev</code>
                         </div>
