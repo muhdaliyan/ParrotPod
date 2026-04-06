@@ -1,3 +1,9 @@
+import asyncio
+import sys
+
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -7,7 +13,7 @@ import os
 load_dotenv()
 
 from database import init_db
-from routers import agents, files, sessions, notifications, dashboard, telephony, voices, config
+from routers import agents, files, sessions, notifications, dashboard, telephony, voices, config, whatsapp
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
@@ -41,6 +47,7 @@ app.include_router(agents.router)
 app.include_router(files.router)
 app.include_router(sessions.router)
 app.include_router(notifications.router)
+app.include_router(whatsapp.router)
 app.include_router(dashboard.router)
 app.include_router(telephony.router)
 app.include_router(voices.router)

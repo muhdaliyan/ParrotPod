@@ -11,6 +11,11 @@
     "dev:frontend": "cd frontend && npm run dev",
     "dev:voice": "cd backend && uv run python voice_agent.py dev"
   },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.5.0",
+    "pino": "^9.0.0",
+    "qrcode": "^1.5.3"
+  },
   "devDependencies": {
     "concurrently": "^8.2.2",
     "wait-on": "^9.0.4"
