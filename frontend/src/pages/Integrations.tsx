@@ -130,9 +130,9 @@ export default function Integrations() {
         <p className="text-on-surface-variant text-lg">Connect Parrot Pod with your favorite tools to automate your workflow.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch">
         {/* Telegram Card */}
-        <div className="group relative bg-surface-container-lowest p-8 rounded-[2rem] border border-outline-variant/10 hover:border-primary/30 transition-all duration-500 hover:shadow-2xl hover:shadow-primary/5 overflow-hidden">
+        <div className="group relative bg-surface-container-lowest p-8 rounded-[2.5rem] border border-outline-variant/10 hover:border-primary/30 transition-all duration-500 hover:shadow-2xl hover:shadow-primary/5 overflow-hidden flex flex-col">
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-primary/10 transition-colors duration-500"></div>
           
           <div className="flex justify-between items-start mb-6">
@@ -152,11 +152,11 @@ export default function Integrations() {
           </div>
 
           <h3 className="text-2xl font-bold text-on-surface mb-3">Telegram Bot</h3>
-          <p className="text-on-surface-variant mb-8 leading-relaxed">
+          <p className="text-on-surface-variant mb-8 leading-relaxed flex-1">
             Get instant notifications on Telegram whenever your AI agent takes an action or records an order.
           </p>
 
-          <div className="space-y-3">
+          <div className="space-y-3 mt-auto">
             <button 
               onClick={handleConnectTelegram}
               className={`w-full py-4 rounded-2xl font-black tracking-wide transition-all duration-300 flex items-center justify-center gap-2 ${
@@ -181,7 +181,7 @@ export default function Integrations() {
         </div>
 
         {/* WhatsApp Card */}
-        <div className="group relative bg-surface-container-lowest p-8 rounded-[2rem] border border-outline-variant/10 hover:border-[#25D366]/30 transition-all duration-500 hover:shadow-2xl hover:shadow-[#25D366]/5 overflow-hidden">
+        <div className="group relative bg-surface-container-lowest p-8 rounded-[2.5rem] border border-outline-variant/10 hover:border-[#25D366]/30 transition-all duration-500 hover:shadow-2xl hover:shadow-[#25D366]/5 overflow-hidden flex flex-col">
           <div className="absolute top-0 right-0 w-32 h-32 bg-[#25D366]/5 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-[#25D366]/10 transition-colors duration-500"></div>
           
           <div className="flex justify-between items-start mb-6">
@@ -201,11 +201,11 @@ export default function Integrations() {
           </div>
 
           <h3 className="text-2xl font-bold text-on-surface mb-3">WhatsApp</h3>
-          <p className="text-on-surface-variant mb-8 leading-relaxed">
+          <p className="text-on-surface-variant mb-8 leading-relaxed flex-1">
             Connect your personal WhatsApp account by scanning a QR code. Your agent will respond to messages automatically.
           </p>
 
-          <div className="space-y-3">
+          <div className="space-y-3 mt-auto">
             <button 
               onClick={() => setShowWhatsAppModal(true)}
               className={`w-full py-4 rounded-2xl font-black tracking-wide transition-all duration-300 flex items-center justify-center gap-2 ${
@@ -399,22 +399,18 @@ export default function Integrations() {
                         </p>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="flex flex-col gap-3">
                         <button 
                           onClick={handleTestWhatsApp}
                           disabled={isTestingWhatsApp}
-                          className="py-4 bg-secondary/10 text-secondary rounded-2xl font-bold hover:bg-secondary/20 transition-all flex items-center justify-center gap-2"
+                          className="w-full py-4 bg-[#25D366] text-white rounded-2xl font-black hover:shadow-lg hover:shadow-[#25D366]/20 transition-all flex items-center justify-center gap-2 group/btn"
                         >
-                          {isTestingWhatsApp ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-                          Test
+                          {isTestingWhatsApp ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} className="group-hover/btn:translate-x-1 transition-transform" />}
+                          Send Test Message
                         </button>
-                        <button 
-                          onClick={handleDisconnectWhatsApp}
-                          className="py-4 bg-error/5 text-error rounded-2xl font-bold hover:bg-error/10 transition-all flex items-center justify-center gap-2"
-                        >
-                          <X size={18} />
-                          Disconnect
-                        </button>
+                        <p className="text-[10px] text-on-surface-variant/40 pt-2 text-center">
+                          To disconnect, use the button on the main integrations card.
+                        </p>
                       </div>
                     </div>
                   </div>
