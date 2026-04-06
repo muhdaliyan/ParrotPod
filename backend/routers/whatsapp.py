@@ -225,6 +225,42 @@ async def test_whatsapp(request: Request):
             
     return {"success": False, "message": "Failed to communicate with bridge."}
 
+@router.post("/send_message")
+async def send_whatsapp_message(request: Request):
+    """Internal endpoint for sending arbitrary messages via WhatsApp."""
+    try:
+        body = await request.json()
+        phone_number = body.get('phone_number')
+        message = body.get('message')
+    except:
+        raise HTTPException(status_code=400, detail="Invalid request body")
+
+    if not phone_number or not message:
+        raise HTTPException(status_code=400, detail="phone_number and message are required")
+
+    if not manager.process or manager.process.poll() is not None:
+        return {"success": False, "message": "WhatsApp bridge is not running."}
+    
+    if manager.status != "CONNECTED":
+        return {"success": False, "message": "WhatsApp is not connected."}
+        
+    if manager.process.stdin:
+        try:
+            # Clean number
+            clean_number = "".join(filter(str.isdigit, phone_number))
+            cmd = json.dumps({
+                "type": "send", 
+                "to": f"{clean_number}@s.whatsapp.net", 
+                "text": message
+            })
+            manager.process.stdin.write(cmd + "\n")
+            manager.process.stdin.flush()
+            return {"success": True}
+        except Exception as e:
+            return {"success": False, "message": str(e)}
+            
+    return {"success": False, "message": "Failed to communicate with bridge"}
+
 @router.post("/start")
 async def start_bridge():
     await manager.start()

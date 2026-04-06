@@ -16,6 +16,8 @@ class AgentCreate(BaseModel):
     telegram_enabled: bool = Field(default=True)
     webhook_enabled: bool = Field(default=False)
     webhook_url: str = Field(default="")
+    whatsapp_enabled: bool = Field(default=0)
+    whatsapp_number: str = Field(default="")
 
 
 class AgentUpdate(BaseModel):
@@ -32,6 +34,8 @@ class AgentUpdate(BaseModel):
     telegram_enabled: Optional[bool] = None
     webhook_enabled: Optional[bool] = None
     webhook_url: Optional[str] = None
+    whatsapp_enabled: Optional[bool] = None
+    whatsapp_number: Optional[str] = None
 
 
 class AgentOut(BaseModel):
@@ -49,6 +53,8 @@ class AgentOut(BaseModel):
     telegram_enabled: bool
     webhook_enabled: bool
     webhook_url: str
+    whatsapp_enabled: bool
+    whatsapp_number: str
     created_at: str
     updated_at: str
 

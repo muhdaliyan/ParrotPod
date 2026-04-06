@@ -34,6 +34,8 @@ async def init_db():
                 telegram_enabled INTEGER DEFAULT 1,
                 webhook_enabled INTEGER DEFAULT 0,
                 webhook_url TEXT DEFAULT '',
+                whatsapp_enabled INTEGER DEFAULT 0,
+                whatsapp_number TEXT DEFAULT '',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
@@ -101,6 +103,14 @@ async def init_db():
                 value TEXT
             )
         """)
+
+        # Migration: Add whatsapp columns if they don't exist
+        try:
+            await db.execute("ALTER TABLE agents ADD COLUMN whatsapp_enabled INTEGER DEFAULT 0")
+        except: pass
+        try:
+            await db.execute("ALTER TABLE agents ADD COLUMN whatsapp_number TEXT DEFAULT ''")
+        except: pass
 
         await db.commit()
         print("[DB] Tables initialized.")

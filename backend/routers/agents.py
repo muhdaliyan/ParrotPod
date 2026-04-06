@@ -42,14 +42,16 @@ async def create_agent(payload: AgentCreate):
     db = await get_db()
     try:
         cursor = await db.execute(
-            """INSERT INTO agents (name, description, instructions, welcome_message, voice, llm_model, language, telegram_enabled, webhook_enabled, webhook_url)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            """INSERT INTO agents (name, description, instructions, welcome_message, voice, llm_model, language, telegram_enabled, webhook_enabled, webhook_url, whatsapp_enabled, whatsapp_number)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 payload.name, payload.description, payload.instructions,
                 payload.welcome_message, payload.voice, payload.llm_model, payload.language,
                 1 if payload.telegram_enabled else 0,
                 1 if payload.webhook_enabled else 0,
-                payload.webhook_url
+                payload.webhook_url,
+                1 if payload.whatsapp_enabled else 0,
+                payload.whatsapp_number
             )
         )
         await db.commit()

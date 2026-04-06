@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Phone, Mic, Brain, Volume2, Bot, Plus, Minus, RefreshCw, Layers, Construction, Network, Database, X, Upload, Trash2, FileText, Settings, TestTube, ChevronDown, Save, Loader2 } from 'lucide-react';
+import { Phone, Mic, Brain, Volume2, Bot, Plus, Minus, RefreshCw, Layers, Construction, Network, Database, X, Upload, Trash2, FileText, Settings, TestTube, ChevronDown, Save, Loader2, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useApi, apiPut, apiPost, apiUploadFile, apiDelete } from '../hooks/useApi';
 import VoiceTestModal from '../components/VoiceTestModal';
@@ -19,6 +19,8 @@ interface Agent {
   telegram_enabled: boolean;
   webhook_enabled: boolean;
   webhook_url: string;
+  whatsapp_enabled: boolean;
+  whatsapp_number: string;
 }
 
 interface KnowledgeFile {
@@ -88,11 +90,13 @@ export default function Workflows() {
   const [form, setForm] = useState({
     name: '', description: '', instructions: '', welcome_message: '', voice: '', llm_model: '',
     telegram_enabled: true, webhook_enabled: false, webhook_url: '',
+    whatsapp_enabled: false, whatsapp_number: '',
   });
 
   const [createForm, setCreateForm] = useState({
     name: '', description: '', instructions: 'You are a helpful AI voice assistant.', welcome_message: 'Hello! How can I help you today?', voice: 'aura-2-luna-en', llm_model: 'gemini-2.5-flash', language: 'en',
     telegram_enabled: true, webhook_enabled: false, webhook_url: '',
+    whatsapp_enabled: false, whatsapp_number: '',
   });
 
   useEffect(() => {
@@ -107,6 +111,8 @@ export default function Workflows() {
         telegram_enabled: activeAgent.telegram_enabled,
         webhook_enabled: activeAgent.webhook_enabled,
         webhook_url: activeAgent.webhook_url,
+        whatsapp_enabled: !!activeAgent.whatsapp_enabled,
+        whatsapp_number: activeAgent.whatsapp_number || '',
       });
     }
   }, [activeAgent?.id]);
@@ -176,6 +182,7 @@ export default function Workflows() {
       setCreateForm({
         name: '', description: '', instructions: 'You are a helpful AI voice assistant.', welcome_message: 'Hello! How can I help you today?', voice: 'aura-2-luna-en', llm_model: 'gemini-2.5-flash', language: 'en',
         telegram_enabled: true, webhook_enabled: false, webhook_url: '',
+        whatsapp_enabled: false, whatsapp_number: '',
       });
     } catch (err) {
       console.error('Create failed', err);
@@ -360,7 +367,7 @@ export default function Workflows() {
           {/* Sub-nodes */}
           {[
             { n: nodes.tools, icon: Construction, label: 'Tools', sub: '4 tools available' },
-            { n: nodes.mcp, icon: Network, label: 'Action Triggers', sub: 'Telegram, Webhooks' },
+            { n: nodes.mcp, icon: Network, label: 'Action Triggers', sub: 'WhatsApp, TG, Webhooks' },
             { n: nodes.rag, icon: Database, label: 'Knowledge', sub: `${files?.length || 0} file(s)` },
           ].map(({ n, icon: Icon, label, sub }) => (
             <motion.div
@@ -654,6 +661,48 @@ export default function Workflows() {
                       <p className="text-xs text-on-surface-variant mt-3 bg-white/50 p-3 rounded-xl border border-outline-variant/10">
                         When enabled, ParrotPod will send a notification to your Telegram bot whenever this agent records an action or order.
                       </p>
+                    </div>
+
+                    <div className="p-5 bg-surface-container-low rounded-2xl border border-surface-container-highest">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-[#25D366]/10 text-[#25D366] rounded-xl flex items-center justify-center">
+                            <MessageSquare size={20} />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-primary text-sm">WhatsApp Notifications</h4>
+                            <p className="text-[10px] text-on-surface-variant">Admin Alert Messaging</p>
+                          </div>
+                        </div>
+                        <label className="flex items-center cursor-pointer">
+                          <div className="relative">
+                            <input
+                              type="checkbox"
+                              className="peer sr-only"
+                              checked={form.whatsapp_enabled}
+                              onChange={(e) => setForm({ ...form, whatsapp_enabled: e.target.checked })}
+                            />
+                            <div className="block w-12 h-7 rounded-full bg-surface-container-highest peer-checked:bg-[#25D366] transition-colors"></div>
+                            <div className="dot absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition transform peer-checked:translate-x-5 shadow-sm"></div>
+                          </div>
+                        </label>
+                      </div>
+
+                      <div className={`space-y-3 transition-opacity ${form.whatsapp_enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Admin Phone Number</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. 1234567890"
+                            value={form.whatsapp_number}
+                            onChange={(e) => setForm({ ...form, whatsapp_number: e.target.value })}
+                            className="w-full bg-white border border-outline-variant/20 rounded-xl px-4 py-2.5 text-primary text-sm font-medium outline-none focus:ring-2 focus:ring-[#25D366]"
+                          />
+                        </div>
+                        <p className="text-[11px] text-on-surface-variant pt-1 leading-relaxed">
+                          Whenever the agent performs an action, a WhatsApp message will be sent to this number via the linked bridge.
+                        </p>
+                      </div>
                     </div>
 
                     <div className="p-5 bg-surface-container-low rounded-2xl border border-surface-container-highest">

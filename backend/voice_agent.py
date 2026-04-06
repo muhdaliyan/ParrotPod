@@ -192,6 +192,41 @@ async def send_webhook(agent_config: dict, agent_name: str, session_room: str, s
         return False
 
 
+async def send_whatsapp(agent_config: dict, agent_name: str, summary: str, items: list) -> bool:
+    """Send order/event summary to WhatsApp admin number via backend API."""
+    if not agent_config.get("whatsapp_enabled", 0):
+        return False
+
+    phone_number = agent_config.get("whatsapp_number")
+    if not phone_number:
+        logger.warning(f"[WhatsApp] No admin number configured for agent '{agent_name}'")
+        return False
+
+    items_text = ""
+    if items:
+        items_text = "\n".join([
+            f"• {i.get('item', 'Unknown')} × {i.get('quantity', 1)}" for i in items
+        ])
+
+    message = f"🦜 *Parrot Pod – New Event*\n\n🤖 *Agent:* {agent_name}\n📋 *Summary:* {summary}"
+    if items_text:
+        message += f"\n\n🛒 *Items:*\n{items_text}"
+    message += "\n\n_Sent by Parrot Pod Voice Agent_"
+
+    # Send via backend API to use the managed WhatsApp bridge
+    url = "http://localhost:8000/api/config/whatsapp/send_message"
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(url, json={
+                "phone_number": phone_number,
+                "message": message,
+            }, timeout=10)
+            return resp.status_code == 200
+    except Exception as e:
+        logger.error(f"[WhatsApp] Failed: {e}")
+        return False
+
+
 async def save_action(agent_id: int, session_room: str, summary: str, items: list, telegram_sent: bool):
     """Persist action/order to SQLite for dashboard metrics."""
     try:
@@ -359,12 +394,14 @@ KNOWLEDGE BASE (use this to answer questions):
 
         sent_tg = await send_telegram(self.agent_config, self.agent_name, summary, action_items)
         sent_wh = await send_webhook(self.agent_config, self.agent_name, self.room_name, summary, action_items, action_type, notes)
+        sent_wa = await send_whatsapp(self.agent_config, self.agent_name, summary, action_items)
         await save_action(self.agent_id, self.room_name, summary, action_items, sent_tg)
 
         return {
             "status": "success",
             "action": action_items,
             "webhook_triggered": sent_wh,
+            "whatsapp_triggered": sent_wa,
             "message": f"Action '{action_type}' recorded successfully."
         }
 
