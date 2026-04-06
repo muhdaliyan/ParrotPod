@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, ExternalLink, ChevronRight, Book, Server, Cpu, Globe, Rocket, Terminal, Layers, Sun, Moon, Key, Phone, Zap } from 'lucide-react';
+import { Search, ExternalLink, ChevronRight, Book, Server, Cpu, Globe, Rocket, Terminal, Layers, Sun, Moon, Key, Phone, Zap, MessageSquare, Send } from 'lucide-react';
 
 interface DocsLayoutProps {
   children: React.ReactNode;
@@ -19,6 +19,7 @@ export default function DocsLayout({ children, activeSection, setActiveSection, 
     { id: 'overview', label: 'Overview', icon: Book },
     { id: 'about', label: 'About', icon: Globe },
     { id: 'tools', label: 'Tools Support', icon: Cpu },
+    { id: 'integrations', label: 'Integrations', icon: Zap, isNew: true },
     { id: 'keys', label: 'Get Your Keys', icon: Key },
     { id: 'telephony', label: 'Telephony (Voice)', icon: Phone },
     { id: 'setup', label: 'Local Setup', icon: Terminal },
@@ -35,6 +36,7 @@ export default function DocsLayout({ children, activeSection, setActiveSection, 
     { id: 'deployment', title: 'Deployment (Cloud)', category: 'Direct Link', icon: Rocket, keywords: ['production', 'hosting', 'render'] },
     { id: 'mcp', title: 'MCP Searcher Setup', category: 'Direct Link', icon: Server, keywords: ['mcp', 'claude', 'antigravity', 'search', 'docs'] },
     { id: 'telephony', title: 'Telephony & Voice', category: 'Direct Link', icon: Phone, keywords: ['phone', 'numbers', 'call', 'webrtc'] },
+    { id: 'integrations', title: 'WhatsApp & Telegram', category: 'Integrations', icon: Zap, keywords: ['whatsapp', 'telegram', 'qr', 'link', 'bot', 'token'] },
 
     // Detailed search sub-items
     { id: 'keys', title: 'OpenAI API Setup', category: 'API Keys', icon: Key, keywords: ['openai', 'gpt', 'billing', 'secret'] },
