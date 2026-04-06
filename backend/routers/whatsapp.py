@@ -3,7 +3,7 @@ import json
 import os
 import subprocess
 import logging
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Request, HTTPException
 from database import get_db, close_db
 import httpx
 
@@ -196,6 +196,34 @@ async def reset_whatsapp():
     # Auto-restart
     await manager.start()
     return {"status": "success", "message": "WhatsApp bridge reset. New QR code will be generated."}
+
+@router.post("/test")
+async def test_whatsapp(request: Request):
+    try:
+        body = await request.json()
+        phone_number = body.get('phone_number')
+    except:
+        phone_number = None
+
+    if not manager.process or manager.process.poll() is not None:
+        return {"success": False, "message": "WhatsApp bridge is not running."}
+    
+    if manager.status != "CONNECTED":
+        return {"success": False, "message": "WhatsApp is not connected. Please scan the QR code first."}
+        
+    if manager.process.stdin:
+        try:
+            # Clean number (keep only digits) then pass
+            clean_number = "".join(filter(str.isdigit, phone_number)) if phone_number else None
+            cmd = json.dumps({"type": "test", "to": clean_number})
+            manager.process.stdin.write(cmd + "\n")
+            manager.process.stdin.flush()
+            dest = clean_number if clean_number else "your account"
+            return {"success": True, "message": f"Test message sent to {dest}!"}
+        except Exception as e:
+            return {"success": False, "message": f"Failed to send test command: {repr(e)}"}
+            
+    return {"success": False, "message": "Failed to communicate with bridge."}
 
 @router.post("/start")
 async def start_bridge():

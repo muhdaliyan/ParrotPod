@@ -98,6 +98,13 @@ if (!isInitialized) {
                     await socket.sendMessage(cmd.to, { text: cmd.text });
                     console.log(`SENT: ${cmd.to}`);
                 }
+                if (cmd.type === 'test') {
+                    const target = cmd.to || (socket.user.id.split(':')[0] + '@s.whatsapp.net');
+                    // Ensure target is a JID
+                    const jid = target.includes('@') ? target : `${target}@s.whatsapp.net`;
+                    await socket.sendMessage(jid, { text: '✅ *ParrotPod Test Message*\n\nYour WhatsApp integration is working perfectly! Your AI agent is now ready to handle messages.' });
+                    console.log(`TEST_SENT: ${jid}`);
+                }
                 if (cmd.type === 'logout') {
                     await socket.logout();
                     console.log('STATE: LOGGED_OUT');

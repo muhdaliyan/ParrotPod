@@ -27,6 +27,9 @@ export default function Integrations() {
   // WhatsApp State
   const { data: whatsapp, refetch: refetchWhatsApp } = useApi<WhatsAppStatus>('/api/config/whatsapp/status');
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [isTestingWhatsApp, setIsTestingWhatsApp] = useState(false);
+  const [testPhoneNumber, setTestPhoneNumber] = useState('');
+  const [whatsappTestResult, setWhatsAppTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   // Poll WhatsApp status when modal is open
   useEffect(() => {
@@ -92,6 +95,21 @@ export default function Integrations() {
       await refetchTelegram();
     } catch (err: any) {
       alert('Failed to disconnect: ' + err.message);
+    }
+  };
+
+  const handleTestWhatsApp = async () => {
+    setIsTestingWhatsApp(true);
+    setWhatsAppTestResult(null);
+    try {
+      const res = await apiPost<{ success: boolean; message: string }>('/api/config/whatsapp/test', {
+        phone_number: testPhoneNumber
+      });
+      setWhatsAppTestResult(res);
+    } catch (err: any) {
+      setWhatsAppTestResult({ success: false, message: err.message || 'Test failed' });
+    } finally {
+      setIsTestingWhatsApp(false);
     }
   };
 
@@ -344,22 +362,61 @@ export default function Integrations() {
 
               <div className="flex flex-col items-center text-center space-y-4">
                 {whatsapp?.status === 'CONNECTED' ? (
-                  <div className="space-y-4 py-4">
-                    <div className="w-16 h-16 bg-success-container/20 text-success rounded-full flex items-center justify-center mx-auto">
-                      <CheckCircle2 size={32} />
+                  <div className="space-y-6 py-4">
+                    <div className="flex flex-col items-center text-center space-y-4">
+                      <div className="w-20 h-20 bg-success/10 rounded-full flex items-center justify-center text-success">
+                        <CheckCircle2 size={40} />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-on-surface">Successfully Linked!</h3>
+                        <p className="text-sm text-on-surface-variant">Your WhatsApp is active and ready.</p>
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <h3 className="text-lg font-bold text-on-surface">Successfully Linked!</h3>
-                      <p className="text-on-surface-variant text-xs px-2">
-                        Parrot Pod is now monitoring your WhatsApp messages.
-                      </p>
+
+                    {whatsappTestResult && (
+                      <div className={`p-4 rounded-2xl flex items-start gap-3 text-sm border ${
+                        whatsappTestResult.success 
+                        ? 'bg-success-container/20 border-success/20 text-success' 
+                        : 'bg-error-container/20 border-error/20 text-error'
+                      }`}>
+                        {whatsappTestResult.success ? <CheckCircle2 size={18} className="shrink-0 mt-0.5" /> : <AlertCircle size={18} className="shrink-0 mt-0.5" />}
+                        <p>{whatsappTestResult.message}</p>
+                      </div>
+                    )}
+
+                    <div className="space-y-4">
+                      <div className="space-y-2 text-left">
+                        <label className="text-xs font-bold text-on-surface-variant ml-1">Test Phone Number (Optional)</label>
+                        <input 
+                          type="text"
+                          value={testPhoneNumber}
+                          onChange={(e) => setTestPhoneNumber(e.target.value)}
+                          placeholder="e.g. 1234567890 (inc. country code)"
+                          className="w-full px-4 py-3 bg-surface-container-low border border-outline-variant/20 rounded-xl focus:ring-2 focus:ring-[#25D366]/30 focus:border-[#25D366] outline-none transition-all text-sm"
+                        />
+                        <p className="text-[10px] text-on-surface-variant/60 ml-1">
+                          Leave blank to send to your own account.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <button 
+                          onClick={handleTestWhatsApp}
+                          disabled={isTestingWhatsApp}
+                          className="py-4 bg-secondary/10 text-secondary rounded-2xl font-bold hover:bg-secondary/20 transition-all flex items-center justify-center gap-2"
+                        >
+                          {isTestingWhatsApp ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                          Test
+                        </button>
+                        <button 
+                          onClick={handleDisconnectWhatsApp}
+                          className="py-4 bg-error/5 text-error rounded-2xl font-bold hover:bg-error/10 transition-all flex items-center justify-center gap-2"
+                        >
+                          <X size={18} />
+                          Disconnect
+                        </button>
+                      </div>
                     </div>
-                    <button 
-                      onClick={handleDisconnectWhatsApp}
-                      className="mt-2 px-6 py-2 bg-error/10 text-error rounded-lg font-bold hover:bg-error/20 transition-all border border-error/10 text-sm"
-                    >
-                      Disconnect Account
-                    </button>
                   </div>
                 ) : (
                   <>

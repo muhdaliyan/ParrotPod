@@ -45,3 +45,6 @@ backend/vad_sig.txt
 
 # MCP SERVER
 parrotpod-mcp/
+
+# sessions 
+backend/whatsapp_sessions/
