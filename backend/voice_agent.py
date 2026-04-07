@@ -214,10 +214,16 @@ async def send_whatsapp(agent_config: dict, agent_name: str, summary: str, items
     message += "\n\n_Sent by Parrot Pod Voice Agent_"
 
     # Send via backend API to use the managed WhatsApp bridge
-    url = "http://localhost:8000/api/config/whatsapp/send_message"
+    send_url = "http://localhost:8000/api/config/whatsapp/send_message"
     try:
         async with httpx.AsyncClient() as client:
-            resp = await client.post(url, json={
+            # Ping status endpoints to wake up/verify bridge before sending
+            await client.get("http://localhost:8000/api/config/whatsapp/status", timeout=5)
+            await client.get("http://localhost:8000/api/config/status", timeout=5)
+            await client.get("http://localhost:8000/api/config/status", timeout=5) # User log showed two checks
+            await asyncio.sleep(0.5)
+            
+            resp = await client.post(send_url, json={
                 "phone_number": phone_number,
                 "message": message,
             }, timeout=10)
