@@ -1,8 +1,9 @@
 <div align="center">
-  <img src="frontend/public/flow.gif" alt="Parrot Pod Agent Flow" width="600px"/>
   
-  # 🦜 Parrot Pod - No-Code AI Voice Agent Builder
+  # Parrot Pod - No-Code AI Voice Agent Builder
   **A powerful, open-source no-code stack to build, configure, and customize AI Voice Agents.**
+
+  <img src="frontend/public/flow.gif" alt="Parrot Pod Agent Flow" width="600px"/>
 
 </div>
 
