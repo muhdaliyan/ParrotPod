@@ -21,6 +21,24 @@ Parrot Pod is a full-stack open-source no-code platform that enables you to swif
 
 ---
 
+## 📸 Screenshots
+
+<div align="center">
+
+### 🖥️ Dashboard & Features
+| | |
+|---|---|
+| ![Platform Overview](screenshots/1.png) | ![Workflow Builder](screenshots/2.png) |
+| ![Agent Management](screenshots/3.png) | ![Integrations](screenshots/4.png) |
+
+### 📚 Documentation Portal
+![Documentation](screenshots/5.png)
+
+</div>
+
+---
+
+
 ## 🏗️ Technical Architecture
 
 Parrot Pod consists of three primary components working together:
