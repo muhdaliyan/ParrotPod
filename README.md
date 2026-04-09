@@ -1,7 +1,13 @@
 <div align="center">
-  
-  # Parrot Pod - No-Code AI Voice Agent Builder
-  **A powerful, open-source no-code stack to build, configure, and customize AI Voice Agents.**
+
+<em>Parrot Pod - No-Code AI Voice Agent Builder</em>
+<br>
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/muhdaliyan/parrotpod)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=flat-square&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/muhdaliyan/)
+[![X](https://img.shields.io/badge/X-Follow-000000?style=flat-square&logo=x&logoColor=white)](https://x.com/muhdaliyan_)
+[![Bluesky](https://img.shields.io/badge/Bluesky-Follow-0285FF?style=flat-square&logo=bluesky&logoColor=white)](https://bsky.app/profile/muhdaliyan.bsky.social)
+[![Instagram](https://img.shields.io/badge/Instagram-Follow-E4405F?style=flat-square&logo=instagram&logoColor=white)](https://www.instagram.com/a1iyan__/)
 
   <img src="frontend/public/flow.gif" alt="Parrot Pod Agent Flow" width="600px"/>
 
